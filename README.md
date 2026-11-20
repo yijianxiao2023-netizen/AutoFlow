@@ -13,7 +13,7 @@ A free AI debate flow that listens through your mic and flows the round for you.
 1. Open the site in a recent version of **Chrome** on a computer with a decent graphics chip (Apple Silicon Macs work well).
 2. Click **Load model**. Only the first load is slow.
 3. Pick the format and the speech that's about to start, then press **Record**.
-4. About every 15 seconds, new notes show up in that speech's column. Switch speeches as the round goes on.
+4. About every 10 seconds, new notes show up in that speech's column. Switch speeches as the round goes on.
 
 You can also paste speech text into the side box and click **Flow this text**.
 
@@ -23,3 +23,11 @@ Policy (CX), Lincoln-Douglas, Public Forum, Parliamentary.
 ## Notes
 - Very fast speaking (spreading) lowers transcription accuracy.
 - Check your league's rules on electronics and recording before using this in competition.
+
+## License and credits
+AutoFlow is licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) for the full terms.
+
+If you use, copy, modify or distribute AutoFlow, or any project based on it, you must:
+1. **Follow the Apache 2.0 license.** Include a copy of the [LICENSE](LICENSE) file and mark any files you changed.
+2. **Give credit.** Credit **SlaxY1r ([yijianxiao2023-netizen](https://github.com/yijianxiao2023-netizen))** as the original creator of AutoFlow, with a link back to this repository: https://github.com/yijianxiao2023-netizen/AutoFlow
+3. **Keep this README and the [NOTICE](NOTICE) file.** Don't delete them or remove the credits from them.
