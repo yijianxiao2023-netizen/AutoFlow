@@ -55,8 +55,10 @@ td.cur{outline:1px solid rgba(124,92,255,.35);outline-offset:-1px}
 .item{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 22px 6px 8px;margin-bottom:5px;line-height:1.35}
 .item.new{animation:flash 1.6s}
 @keyframes flash{0%{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,92,255,.35)}100%{}}
-.item .arg{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
-.item .pt{outline:none}
+.item .arg{font-size:11px;font-weight:700;color:#b7a6ff;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.item .pt{outline:none;font-weight:500}
+.item .cite{display:inline-block;margin-top:3px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--warn);background:rgba(245,184,74,.10);border:1px solid rgba(245,184,74,.25);border-radius:4px;padding:0 5px;outline:none}
+.item .cite:focus{background:var(--panel2)}
 .item .pt:focus,.item .arg:focus{background:var(--panel2);border-radius:4px}
 .item .x{position:absolute;top:3px;right:4px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px;opacity:0}
 .item:hover .x{opacity:1}
@@ -82,7 +84,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 </head>
 <body>
 <header>
-  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v7</small></h1>
+  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v8</small></h1>
   <div class="grp"><label class="sm" for="fmt">Format</label>
     <select id="fmt">
       <option value="policy">Policy (CX)</option>
@@ -148,7 +150,7 @@ const FORMATS={
 };
 const FMT_NAMES={policy:"policy (CX) debate",ld:"Lincoln-Douglas debate",pf:"Public Forum debate",parli:"parliamentary debate"};
 const PF_NOTE="In this PF flow, columns alternate: blue = team speaking first, red = team speaking second.";
-const FLUSH_MS=15000;
+const FLUSH_MS=10000;
 
 let S={format:"policy",current:0,items:[],nextId:1,log:[],model:null};
 let buffer="",pendingText="",partial="",inFlight=false,engine=null,loading=false,lastFlush=Date.now();
@@ -180,7 +182,7 @@ function renderFlow(){
   const f=FORMATS[S.format];
   const head=`<thead><tr>${f.cols.map((c,i)=>`<th class="${side(i)} ${i===S.current?"cur":""}">${esc(c)}</th>`).join("")}</tr></thead>`;
   if(!S.items.length){
-    $("flowwrap").innerHTML=`<table>${head}</table><div class="empty">1. Click <b>Load model</b> above. The first time takes a few minutes.<br>2. Choose the speech that's about to start, then press <b>Record</b>.<br>Every 15 seconds or so, the AI turns what it heard into flow notes and lines each response up next to the argument it answers.${S.format==="pf"?"<br><br>"+PF_NOTE:""}</div>`;
+    $("flowwrap").innerHTML=`<table>${head}</table><div class="empty">1. Click <b>Load model</b> above. The first time takes a few minutes.<br>2. Choose the speech that's about to start, then press <b>Record</b>.<br>Every 10 seconds or so, the AI turns what it heard into flow notes and lines each response up next to the argument it answers.${S.format==="pf"?"<br><br>"+PF_NOTE:""}</div>`;
     return;
   }
   const roots=[],groups=new Map();
@@ -190,7 +192,7 @@ function renderFlow(){
     const g=groups.get(r);
     html+="<tr>"+f.cols.map((_,ci)=>{
       const cell=g.filter(x=>x.col===ci).sort((a,b)=>a.id-b.id);
-      return `<td class="${side(ci)} ${ci===S.current?"cur":""}">`+cell.map(it=>`<div class="item ${newIds.has(it.id)?"new":""}" data-id="${it.id}">${it.arg?`<div class="arg" contenteditable="true" spellcheck="false">${esc(it.arg)}</div>`:""}<div class="pt" contenteditable="true">${esc(it.point)}</div><button class="x" title="Delete">×</button></div>`).join("")+"</td>";
+      return `<td class="${side(ci)} ${ci===S.current?"cur":""}">`+cell.map(it=>`<div class="item ${newIds.has(it.id)?"new":""}" data-id="${it.id}">${it.arg?`<div class="arg" contenteditable="true" spellcheck="false">${esc(it.arg)}</div>`:""}<div class="pt" contenteditable="true">${esc(it.point)}</div>${it.cite?`<div class="cite" contenteditable="true" spellcheck="false">${esc(it.cite)}</div>`:""}<button class="x" title="Delete">×</button></div>`).join("")+"</td>";
     }).join("")+"</tr>";
   }
   $("flowwrap").innerHTML=html+"</tbody></table>";
@@ -204,7 +206,7 @@ function renderFlow(){
     };
     el.querySelectorAll("[contenteditable]").forEach(ed=>ed.addEventListener("blur",()=>{
       const it=S.items.find(x=>x.id===id);if(!it)return;
-      if(ed.classList.contains("pt"))it.point=ed.textContent.trim();else it.arg=ed.textContent.trim();
+      const v=ed.textContent.trim();if(ed.classList.contains("pt"))it.point=v;else if(ed.classList.contains("cite"))it.cite=v;else it.arg=v;
       save();
     }));
   });
@@ -286,26 +288,33 @@ $("model").onchange=()=>{if(engine)$("modelMsg").textContent="Press Reload to sw
 
 function buildMessages(chunk){
   const f=FORMATS[S.format],cur=f.cols[S.current];
-  const existing=S.items.slice(-40).map(it=>`#${it.id} [${f.cols[it.col]}] ${it.arg?it.arg+": ":""}${it.point}`).join("\n")||"(empty)";
-  const sys=`You are an expert ${FMT_NAMES[S.format]} judge who flows rounds. You turn live speech transcripts into short flow notes and reply with JSON only.`;
-  const user=`Speeches in order: ${f.cols.join(", ")}. Current speech: ${cur}.
-${S.format==="pf"?PF_NOTE+"\n":""}
-EXISTING FLOW:
+  const fmtItem=it=>`#${it.id} ${f.cols[it.col]} | ${it.arg||"-"} | ${it.point}${it.cite?" | "+it.cite:""}`;
+  const others=S.items.filter(it=>it.col!==S.current).slice(-30);
+  const same=S.items.filter(it=>it.col===S.current).slice(-10);
+  const existing=[...others,...same].sort((a,b)=>a.id-b.id).map(fmtItem).join("\n")||"(empty)";
+  const sys=`You are an expert ${FMT_NAMES[S.format]} debater flowing a round on paper. You turn a live speech-to-text transcript into flow notes, one per line, in this exact format:
+SECTION | TAGLINE | CITE | REF
+
+SECTION = the section the speaker named (e.g. Plan, Value, Criterion, Framework, Contention 1, Adv 1 – Health, T, DA, CP, K, Case), or - if it continues the previous section.
+TAGLINE = the claim in flow shorthand, at most 12 words: drop filler words, use abbreviations and arrows (→, ↑, ↓, b/c, w/, =).
+CITE = the card's author and 2-digit year exactly as read (e.g. Rivera 24), or - if no card was read.
+REF = the #number of the earlier note this answers or extends, or - if it is new.
+
+Rules:
+- Flow only arguments. Skip pleasantries and filler: "I affirm", "I negate", "I'm proud to affirm", "thank you", roadmaps, time signals, "first/next".
+- One line per tagline or card. Never invent arguments, evidence, authors or topics.
+- The transcript comes from speech recognition. When a word is clearly misheard or makes no sense, replace it with the most likely intended word (e.g. "river a 24" → "Rivera 24", "dis ad" → "DA", "perm do bath" → "perm do both").
+- Do not repeat notes already in the flow.
+- Output only the note lines. No headings, no explanations.`;
+  const user=`Speeches: ${f.cols.join(", ")}. Current speech: ${cur}.${S.format==="pf"?" "+PF_NOTE:""}
+
+FLOW SO FAR (#id speech | section | tagline | cite):
 ${existing}
 
-NEW TRANSCRIPT FROM ${cur} (speech-to-text, may have errors):
+NEW TRANSCRIPT (${cur}):
 """${chunk}"""
 
-Make one item per argument, card, or answer in the new transcript.
-- "note": flow shorthand, max 14 words, using abbreviations and arrows (→). Keep author names and years.
-- "responds_to": the # number of the existing item it answers or extends, or null if it is a new contention, advantage, off-case (T, DA, CP, K) or framework.
-- "label": short section name the speaker used (like "Contention 1", "Value", "Framework", "Advantage 2"), or "" if it is just an answer.
-- Skip filler, roadmaps, time signals. Don't repeat items already in the flow.
-
-IMPORTANT: Only write what the speaker actually said in the NEW TRANSCRIPT. Never invent arguments, evidence, or topics. Use the speaker's own key words.
-
-Reply with JSON only, in this format (replace the <...> parts):
-{"items":[{"label":"<section name or empty>","note":"<short note using the speaker's words>","responds_to":<# number or null>}]}`;
+Flow lines for the new transcript:`;
   return [{role:"system",content:sys},{role:"user",content:user}];
 }
 
@@ -328,38 +337,73 @@ function parseRaw(txt){
   const objs=[...txt.matchAll(/\{[^{}]*"note"[^{}]*\}/g)].map(x=>{try{return JSON.parse(x[0])}catch(e){return null}}).filter(Boolean);
   return {items:objs};
 }
+const EMPTY=/^(-+|—|–|none|n\/a|null|no cite|no card)?$/i;
+function parsePipe(line){
+  line=line.replace(/^\s*([-*•]|\d+[.)])\s+/,"").replace(/\*\*/g,"").trim();
+  if(!line.includes("|"))return null;
+  if(/^SECTION\s*\|/i.test(line)||/^<.*>/.test(line))return null;
+  const p=line.split("|").map(x=>x.trim().replace(/^(SECTION|TAGLINE|CITE|REF)\s*[:=]\s*/i,""));
+  if(p.length<2)return null;
+  let [label,tag,cite,ref]=[p[0],p[1],p[2]||"",p[3]||""];
+  if(EMPTY.test(tag)||/^<.*>$/.test(tag))return null;
+  if(EMPTY.test(label))label="";
+  if(EMPTY.test(cite))cite="";
+  if(/^#?\d+$/.test(cite)&&!ref){ref=cite;cite=""}
+  const m=ref.match(/#?(\d+)/);
+  return {label,note:tag,cite,responds_to:m?+m[1]:null};
+}
+
+let lastLabel={};
+function addItem(it0,col,ids,source){
+  if(!it0||!it0.note)return false;
+  if(/^\s*</.test(it0.note))return false;
+  if(!grounded(it0.note+" "+(it0.label||""),source)){console.log("[AutoFlow] dropped made-up note:",it0.note);return false}
+  const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,"");
+  if(S.items.some(x=>x.col===col&&norm(x.point)===norm(it0.note)))return false;
+  let p=it0.responds_to;if(typeof p==="string")p=parseInt(p.replace(/\D/g,""),10);
+  const parent=ids.has(p)?p:null;
+  const label=String(it0.label||"").slice(0,60);
+  const showLabel=label&&label!==lastLabel[col]?label:"";
+  if(label)lastLabel[col]=label;
+  const it={id:S.nextId++,col,arg:showLabel,point:String(it0.note).slice(0,220),cite:String(it0.cite||"").slice(0,40),parent};
+  S.items.push(it);ids.add(it.id);newIds.add(it.id);
+  return true;
+}
 
 async function flush(force){
   const chunk=buffer.trim();
   if(!chunk||!engine)return;
-  if(inFlight){if(force)setTimeout(()=>flush(true),1500);return}
+  if(inFlight){if(force)setTimeout(()=>flush(true),1000);return}
   const words=chunk.split(/\s+/);
   if(!force&&words.length<8)return;
-  const MAXW=350;
+  const MAXW=250;
   const now=words.slice(0,MAXW).join(" "),rest=words.slice(MAXW).join(" ");
   buffer=rest;pendingText=now;inFlight=true;lastFlush=Date.now();
   const col=S.current;
   setStatus("AI is flowing…","busy");renderTranscript();
+  const ids=new Set(S.items.map(x=>x.id));
+  let added=0,raw="",lineBuf="";
+  const handleLine=l=>{const it=parsePipe(l);if(it&&addItem(it,col,ids,now)){added++;save();renderFlow()}};
   try{
-    const raw=await askAI(buildMessages(now));
+    raw=await askAI(buildMessages(now),delta=>{
+      lineBuf+=delta;
+      let i;
+      while((i=lineBuf.indexOf("\n"))>=0){handleLine(lineBuf.slice(0,i));lineBuf=lineBuf.slice(i+1)}
+    });
+    if(lineBuf.trim())handleLine(lineBuf);
     console.log("[AutoFlow] AI reply:",raw);
-    let list=parseJSON(raw).items.map(normItem).filter(Boolean);
-    const before=list.length;
-    list=list.filter(x=>!/^\s*</.test(x.note)&&grounded(x.note+" "+(x.label||""),now));
-    if(before>list.length)console.log("[AutoFlow] dropped",before-list.length,"made-up note(s)");
-    if(!list.length)list=parseLines(raw);
-    showRaw(raw,list.length);
-    const ids=new Set(S.items.map(x=>x.id));
-    for(const it0 of list){
-      let p=it0.responds_to;if(typeof p==="string")p=parseInt(p.replace(/\D/g,""),10);
-      const parent=ids.has(p)?p:null;
-      const it={id:S.nextId++,col,arg:String(it0.label||"").slice(0,60),point:String(it0.note).slice(0,220),parent};
-      S.items.push(it);ids.add(it.id);newIds.add(it.id);
+    if(!added){
+      let list=parseJSON(raw).items.map(normItem).filter(Boolean);
+      if(!list.length)list=parseLines(raw);
+      for(const it0 of list)if(addItem(it0,col,ids,now))added++;
     }
+    showRaw(raw,added);
     S.log.push({t:now});pendingText="";save();renderFlow();aiFails=0;
-    if(buffer.trim())setTimeout(()=>flush(true),300);
+    if(buffer.trim())setTimeout(()=>flush(true),200);
   }catch(e){
-    console.error(e);buffer=(now+" "+buffer).trim();pendingText="";aiFails++;
+    console.error(e);
+    if(!added)buffer=(now+" "+buffer).trim();else S.log.push({t:now});
+    pendingText="";aiFails++;
     const m=String(e&&e.message||e);
     showError("AI error: "+m);
     toast(aiFails>=3?"The AI keeps failing. Click 'Copy error' next to the model and send it to Claude.":"AI error. It will retry with the next chunk.");
@@ -396,9 +440,14 @@ function showRaw(raw,n){
   el.textContent=(raw&&raw.trim())?raw:"(the model sent back an empty reply)";
   $("rawSum").textContent="Last AI reply ("+n+" note"+(n===1?"":"s")+" found)";
 }
-async function askAI(messages){
-  const r=await engine.chat.completions.create({messages,temperature:0.1,max_tokens:600});
-  return r.choices?.[0]?.message?.content||"";
+async function askAI(messages,onDelta){
+  const stream=await engine.chat.completions.create({messages,temperature:0.1,max_tokens:400,stream:true});
+  let text="";
+  for await(const c of stream){
+    const d=c.choices?.[0]?.delta?.content||"";
+    if(d){text+=d;onDelta&&onDelta(d)}
+  }
+  return text;
 }
 setInterval(()=>{if(buffer.trim()&&Date.now()-lastFlush>FLUSH_MS)flush(false)},2000);
 
@@ -447,10 +496,10 @@ $("fmt").onchange=e=>{
 };
 $("clearBtn").onclick=()=>$("confirmModal").classList.add("show");
 $("cNo").onclick=()=>$("confirmModal").classList.remove("show");
-$("cYes").onclick=()=>{S.items=[];S.log=[];S.nextId=1;S.current=0;buffer="";pendingText="";$("confirmModal").classList.remove("show");save();renderSpeeches();renderFlow();renderTranscript()};
+$("cYes").onclick=()=>{lastLabel={};S.items=[];S.log=[];S.nextId=1;S.current=0;buffer="";pendingText="";$("confirmModal").classList.remove("show");save();renderSpeeches();renderFlow();renderTranscript()};
 $("copyBtn").onclick=()=>{
   const f=FORMATS[S.format];
-  const text=f.cols.map((c,ci)=>{const its=S.items.filter(x=>x.col===ci);if(!its.length)return"";return `== ${c} ==\n`+its.map(it=>`${it.arg?"["+it.arg+"] ":""}${it.point}${it.parent?"  (→ #"+it.parent+")":""}  #${it.id}`).join("\n")}).filter(Boolean).join("\n\n");
+  const text=f.cols.map((c,ci)=>{const its=S.items.filter(x=>x.col===ci);if(!its.length)return"";return `== ${c} ==\n`+its.map(it=>`${it.arg?"["+it.arg+"] ":""}${it.point}${it.cite?" — "+it.cite:""}${it.parent?"  (→ #"+it.parent+")":""}  #${it.id}`).join("\n")}).filter(Boolean).join("\n\n");
   navigator.clipboard.writeText(text||"(empty flow)").then(()=>toast("Flow copied as text")).catch(()=>toast("Couldn't copy"));
 };
 
