@@ -307,6 +307,12 @@ Reply with JSON only, in this exact shape:
 }
 
 function parseJSON(txt){
+  const r=parseRaw(txt);
+  if(Array.isArray(r))return {items:r};
+  if(r&&!r.items&&r.note)return {items:[r]};
+  return r&&Array.isArray(r.items)?r:{items:[]};
+}
+function parseRaw(txt){
   txt=String(txt||"").replace(/```(?:json)?/gi,"").trim();
   try{return JSON.parse(txt)}catch(e){}
   const m=txt.match(/\{[\s\S]*\}/);
