@@ -82,7 +82,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 </head>
 <body>
 <header>
-  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v5</small></h1>
+  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v6</small></h1>
   <div class="grp"><label class="sm" for="fmt">Format</label>
     <select id="fmt">
       <option value="policy">Policy (CX)</option>
@@ -122,6 +122,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
         <button class="btn primary" id="sendManual">Flow this text</button>
         <span class="spacer"></span>
       </div>
+      <details style="font-size:12px"><summary id="rawSum" style="cursor:pointer;color:var(--muted)">Last AI reply</summary><pre id="rawReply" style="white-space:pre-wrap;max-height:180px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0 0;font-family:'JetBrains Mono',monospace;font-size:11px">(nothing yet)</pre></details>
       <div class="note">Pick the current speech above before it starts. Click any note to edit it, or hover over it and press × to delete it. Your flow is saved in this browser.</div>
     </div>
   </aside>
@@ -301,8 +302,8 @@ Make one item per argument, card, or answer in the new transcript.
 - "label": short section label like "Adv 1 – Econ", "Politics DA", "Cap K", or "" if it is just an answer.
 - Skip filler, roadmaps, time signals. Don't repeat items already in the flow.
 
-Reply with JSON only, in this exact shape:
-{"items":[{"label":"","note":"","responds_to":null}]}`;
+Reply with JSON only. Example of the format (your notes must come from the NEW TRANSCRIPT, not this example):
+{"items":[{"label":"Politics DA","note":"Uniq – bill passes now, PC high","responds_to":null},{"label":"","note":"Link – plan costs PC, Senate backlash","responds_to":null},{"label":"","note":"N/U – bill already dead (Politico 26)","responds_to":3}]}`;
   return [{role:"system",content:sys},{role:"user",content:user}];
 }
 
@@ -338,11 +339,15 @@ async function flush(force){
   const col=S.current;
   setStatus("AI is flowing…","busy");renderTranscript();
   try{
-    const out=parseJSON(await askAI(buildMessages(now)));
-    const list=Array.isArray(out)?out:(out.items||[]);
+    const raw=await askAI(buildMessages(now));
+    console.log("[AutoFlow] AI reply:",raw);
+    let list=parseJSON(raw).items.map(normItem).filter(Boolean);
+    const EX=["Uniq – bill passes now, PC high","Link – plan costs PC, Senate backlash","N/U – bill already dead (Politico 26)"];
+    list=list.filter(x=>!EX.includes(String(x.note).trim()));
+    if(!list.length)list=parseLines(raw);
+    showRaw(raw,list.length);
     const ids=new Set(S.items.map(x=>x.id));
     for(const it0 of list){
-      if(!it0||!it0.note)continue;
       let p=it0.responds_to;if(typeof p==="string")p=parseInt(p.replace(/\D/g,""),10);
       const parent=ids.has(p)?p:null;
       const it={id:S.nextId++,col,arg:String(it0.label||"").slice(0,60),point:String(it0.note).slice(0,220),parent};
@@ -358,6 +363,27 @@ async function flush(force){
   }finally{inFlight=false;idleStatus();renderTranscript()}
 }
 let aiFails=0;
+function normItem(o){
+  if(!o)return null;
+  if(typeof o==="string")return {label:"",note:o,responds_to:null};
+  const note=o.note||o.notes||o.text||o.point||o.argument||o.content||o.summary||o.tag||o.claim;
+  if(!note||typeof note!=="string")return null;
+  const label=o.label||o.section||o.arg||o.heading||o.position||"";
+  const rt=o.responds_to??o.respondsTo??o.response_to??o.answers??o.parent??null;
+  return {label:typeof label==="string"?label:"",note,responds_to:rt};
+}
+function parseLines(raw){
+  return String(raw||"").split(/\n+/).map(l=>l.trim())
+    .filter(l=>/^([-*•]|\d+[.)])\s+/.test(l))
+    .map(l=>l.replace(/^([-*•]|\d+[.)])\s+/,"").replace(/\*\*/g,""))
+    .filter(l=>l.length>2&&!/^[{}\[\]]/.test(l))
+    .map(l=>{const m=l.match(/#(\d+)/);return {label:"",note:l.replace(/\(?(answers|responds to|re:?)\s*#\d+\)?/i,"").trim(),responds_to:m?+m[1]:null}});
+}
+function showRaw(raw,n){
+  const el=$("rawReply");if(!el)return;
+  el.textContent=(raw&&raw.trim())?raw:"(the model sent back an empty reply)";
+  $("rawSum").textContent="Last AI reply ("+n+" note"+(n===1?"":"s")+" found)";
+}
 async function askAI(messages){
   const r=await engine.chat.completions.create({messages,temperature:0.2,max_tokens:600});
   return r.choices?.[0]?.message?.content||"";
