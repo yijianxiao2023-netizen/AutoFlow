@@ -91,26 +91,32 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 .tab:hover .tx{opacity:1}
 .tab.add{color:var(--muted);font-weight:500}
 .sheets .hint{margin-left:auto;font-size:11px;color:#5d6575;white-space:nowrap;padding-left:12px}
-.flowwrap{background:#0c0e12}
-table.grid{border-collapse:collapse;table-layout:fixed;min-width:100%}
-table.grid th{position:sticky;top:0;z-index:2;background:#14171d;padding:6px 8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-align:left;border-right:1px solid #232833;border-bottom:1px solid #2c3240;width:210px;min-width:210px;cursor:pointer;user-select:none}
-table.grid th.aff{color:var(--aff)}table.grid th.neg{color:var(--neg)}
-table.grid th.cur{background:#1b1f29;box-shadow:inset 0 -2px 0 var(--accent)}
-table.grid td{vertical-align:top;padding:0;border-right:1px solid #1d212a;border-bottom:1px solid #1a1e26;width:210px;min-width:210px;max-width:210px;background:none}
-table.grid td.cur{background:rgba(124,92,255,.04);outline:none}
-table.grid td .c{min-height:24px;padding:3px 7px;line-height:18px;font-size:13px;outline:none;white-space:pre-wrap;word-break:break-word}
-table.grid td.aff .c{color:#cfe0ff}table.grid td.neg .c{color:#ffd9d9}
-table.grid td .lab{padding:3px 7px 0;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;outline:none}
+.flowwrap{background:#0c0e12;position:relative;outline:none}
+table.grid{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content}
+table.grid col{width:220px}table.grid col.rnc{width:46px}
+table.grid thead th{position:sticky;top:0;z-index:3;background:#14171d;padding:5px 8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-align:left;border-right:1px solid #262b36;border-bottom:1px solid #2c3240;cursor:pointer;user-select:none;min-width:0}
+table.grid thead th.corner{left:0;z-index:4;cursor:default}
+table.grid thead th.aff{color:var(--aff)}table.grid thead th.neg{color:var(--neg)}
+table.grid thead th.cur{background:#1b1f29;box-shadow:inset 0 -2px 0 var(--accent)}
+table.grid th.rn{position:sticky;left:0;z-index:2;background:#12151b;color:#5d6575;font:500 11px/1 'JetBrains Mono',monospace;text-align:center;padding:0;border-right:1px solid #262b36;border-bottom:1px solid #1a1e26;min-width:0;cursor:default}
+table.grid th.rn.on{color:var(--text);background:#1b1f29}
+table.grid td{vertical-align:top;padding:3px 7px;min-height:24px;height:24px;line-height:18px;font-size:13px;border-right:1px solid #1d212a;border-bottom:1px solid #1a1e26;white-space:pre-wrap;word-break:break-word;cursor:cell;background:none;min-width:0;max-width:none}
+table.grid td.aff{color:#cfe0ff}table.grid td.neg{color:#ffd9d9}
+table.grid td.cur{background:rgba(124,92,255,.035);outline:none}
+table.grid td.sel{box-shadow:inset 0 0 0 2px var(--accent);background:rgba(124,92,255,.08)}
+table.grid td .lab{display:block;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
 table.grid td.aff .lab{color:var(--aff)}table.grid td.neg .lab{color:var(--neg)}
-table.grid td:focus-within{box-shadow:inset 0 0 0 2px var(--accent);background:#161a22}
+table.grid td .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(124,92,255,.75);margin-right:5px;vertical-align:middle}
 table.grid td.new{animation:flash 1.6s}
-table.grid td.ai .c::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(124,92,255,.7);margin-right:5px;vertical-align:middle}
-@keyframes flash{0%{background:rgba(124,92,255,.25)}100%{background:none}}
+@keyframes flash{0%{background:rgba(124,92,255,.28)}100%{background:none}}
+.ed{position:absolute;z-index:5;box-shadow:0 0 0 2px var(--accent),0 6px 20px rgba(0,0,0,.5);background:#161a22}
+.ed textarea{display:block;width:100%;box-sizing:border-box;border:none;outline:none;resize:none;background:transparent;padding:3px 7px;font:13px/18px Inter,system-ui,sans-serif;overflow:hidden;min-height:24px}
+.ed.aff textarea{color:#cfe0ff}.ed.neg textarea{color:#ffd9d9}
 </style>
 </head>
 <body>
 <header>
-  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v8 grid</small></h1>
+  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v9 sheet</small></h1>
   <div class="grp"><label class="sm" for="fmt">Format</label>
     <select id="fmt">
       <option value="policy">Policy (CX)</option>
@@ -152,7 +158,7 @@ table.grid td.ai .c::before{content:"";display:inline-block;width:5px;height:5px
         <span class="spacer"></span>
       </div>
       <details style="font-size:12px"><summary id="rawSum" style="cursor:pointer;color:var(--muted)">Last AI reply</summary><pre id="rawReply" style="white-space:pre-wrap;max-height:180px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0 0;font-family:'JetBrains Mono',monospace;font-size:11px">(nothing yet)</pre></details>
-      <div class="note">Pick the current speech above before it starts. You can type in any cell yourself, with or without the AI. To delete a note, clear its text. Purple dots mark AI notes. Your flow is saved in this browser.</div>
+      <div class="note">Pick the current speech above before it starts. You can type in any cell yourself, with or without the AI. Start a cell with # for a heading. Purple dots mark AI notes. Your flow is saved in this browser.</div>
     </div>
   </aside>
 </main>
@@ -202,66 +208,78 @@ function switchSpeech(i){
   S.current=i;S.log.push({sep:FORMATS[S.format].cols[i]});save();renderSpeeches();renderFlow();renderTranscript();
 }
 
-/* ---------- Flow grid (ebb-style, keyboard-first) ---------- */
-let pendingRow=null,focusPos=null,newIds=new Set();
+/* ---------- Flow grid (spreadsheet-style) ---------- */
+const PAGE=1000;
+let sel={row:0,col:0},editing=null,shown={},newIds=new Set();
 function ensureSheets(){
   if(!Array.isArray(S.sheets)||!S.sheets.length){S.sheets=[{id:1,name:"Case"}];S.sheet=1;S.nextSheet=2}
   if(!S.sheets.some(s=>s.id===S.sheet))S.sheet=S.sheets[0].id;
-  const legacy=S.items.filter(x=>x.row===undefined||x.sheet===undefined).sort((a,b)=>a.id-b.id);
-  for(const it of legacy){if(it.sheet===undefined)it.sheet=S.sheet;delete it.row}
-  for(const it of legacy)placeItem(it);
+  for(const it of S.items)if(it.sheet===undefined)it.sheet=S.sheet;
+  for(const sh of S.sheets){
+    const its=S.items.filter(x=>x.sheet===sh.id&&x.row!==undefined);
+    if(S.gridV!==2||its.some(x=>!Number.isInteger(x.row))){
+      const keys=[...new Set(its.map(x=>x.row))].sort((a,b)=>a-b),map=new Map(keys.map((k,i)=>[k,i]));
+      for(const it of its)it.row=map.get(it.row);
+    }
+  }
+  S.gridV=2;
+  const unplaced=S.items.filter(x=>x.row===undefined).sort((a,b)=>a.id-b.id);
+  for(const it of unplaced)placeItem(it);
 }
 function sheetItems(sh=S.sheet){return S.items.filter(x=>x.sheet===sh&&x.row!==undefined)}
-function rowKeys(sh=S.sheet){
-  const set=new Set(sheetItems(sh).map(x=>x.row));
-  if(pendingRow&&pendingRow.sheet===sh)set.add(pendingRow.row);
-  return [...set].sort((a,b)=>a-b);
-}
 function cellAt(row,col,sh=S.sheet){return S.items.find(x=>x.sheet===sh&&x.row===row&&x.col===col)}
-function keyBetween(a,b,sh){
-  if(b===undefined)return a+1;
-  if(b-a<1e-6){renumber(sh);return null}
-  return (a+b)/2;
+function maxRow(sh=S.sheet){let m=-1;for(const x of S.items)if(x.sheet===sh&&x.row>m)m=x.row;return m}
+function insertRowAfter(r,sh=S.sheet){
+  for(const x of S.items)if(x.sheet===sh&&x.row>r)x.row++;
+  if(sh===S.sheet){if(sel.row>r)sel.row++;if(editing&&editing.sheet===sh&&editing.row>r)editing.row++}
 }
-function renumber(sh){
-  const keys=rowKeys(sh),map=new Map(keys.map((k,i)=>[k,i+1]));
-  for(const it of S.items)if(it.sheet===sh&&map.has(it.row))it.row=map.get(it.row);
-  if(pendingRow&&pendingRow.sheet===sh)pendingRow.row=map.get(pendingRow.row);
-  if(focusPos&&focusPos.sheet===sh&&map.has(focusPos.row))focusPos.row=map.get(focusPos.row);
+function deleteRow(r,sh=S.sheet){
+  const gone=S.items.filter(x=>x.sheet===sh&&x.row===r);
+  for(const g of gone)S.items.forEach(x=>{if(x.parent===g.id)x.parent=g.parent});
+  S.items=S.items.filter(x=>!(x.sheet===sh&&x.row===r));
+  for(const x of S.items)if(x.sheet===sh&&x.row>r)x.row--;
 }
 function placeItem(it){
   const items=S.items.filter(x=>x.sheet===it.sheet&&x!==it&&x.row!==undefined);
-  const rows=[...new Set(items.map(x=>x.row))].sort((a,b)=>a-b);
-  const maxRow=rows.length?rows[rows.length-1]:0;
   const parent=it.parent?items.find(x=>x.id===it.parent):null;
-  if(!parent){it.row=maxRow+1;return}
+  if(!parent){
+    let m=-1;for(const x of items)if(x.row>m)m=x.row;
+    let r=m+1;
+    if(it.col>0){
+      let lastInCol=-1;for(const x of items)if(x.col===it.col&&x.row>lastInCol)lastInCol=x.row;
+      r=Math.max(lastInCol+1,0);
+      while(items.some(x=>x.row===r&&x.col>=it.col))r++;
+      if(items.some(x=>x.row===r&&x.col<it.col&&x.arg))r=m+1;
+    }
+    it.row=r;return;
+  }
   const sub=new Set([parent.id]);let grew=true;
   while(grew){grew=false;for(const x of items)if(x.parent&&sub.has(x.parent)&&!sub.has(x.id)){sub.add(x.id);grew=true}}
+  const m=items.reduce((a,x)=>Math.max(a,x.row),-1);
   const block=[parent.row];
-  for(const r of rows){
-    if(r<=parent.row)continue;
+  for(let r=parent.row+1;r<=m;r++){
     const ri=items.filter(x=>x.row===r);
+    if(!ri.length)break;
     if(ri.some(x=>!sub.has(x.id)&&(x.arg||x.col>=it.col)))break;
     block.push(r);
   }
   let lastUsed=-1;
   block.forEach((r,i)=>{if(items.some(x=>x.row===r&&x.col===it.col))lastUsed=i});
   for(let i=lastUsed+1;i<block.length;i++){if(!items.some(x=>x.row===block[i]&&x.col===it.col)){it.row=block[i];return}}
-  const end=block[block.length-1],next=rows.find(r=>r>end);
-  let k=keyBetween(end,next,it.sheet);
-  if(k===null){return placeItem(it)}
-  it.row=k;
+  const end=block[block.length-1];
+  if(items.some(x=>x.row===end+1))insertRowAfter(end,it.sheet);
+  it.row=end+1;
 }
 function leftParent(row,col){for(let c=col-1;c>=0;c--){const x=cellAt(row,c);if(x)return x.id}return null}
 
 function renderSheets(){
   const el=$("sheets");
-  el.innerHTML=S.sheets.map(s=>`<div class="tab ${s.id===S.sheet?"on":""}" data-id="${s.id}"><span class="nm" spellcheck="false">${esc(s.name)}</span>${S.sheets.length>1?`<button class="tx" title="Delete sheet">×</button>`:""}</div>`).join("")+`<button class="tab add" id="addSheet" title="New sheet (Ctrl+Shift+S)">+ Sheet</button><span class="hint">Click a cell to type · Enter: new row · Tab: next column · arrows move · Ctrl+1–9: current speech</span>`;
+  el.innerHTML=S.sheets.map(s=>`<div class="tab ${s.id===S.sheet?"on":""}" data-id="${s.id}"><span class="nm" spellcheck="false">${esc(s.name)}</span>${S.sheets.length>1?`<button class="tx" title="Delete sheet">×</button>`:""}</div>`).join("")+`<button class="tab add" id="addSheet" title="New sheet (Ctrl+Shift+S)">+ Sheet</button><span class="hint">Type to write · Enter: edit / down · Tab: right · Ctrl+Enter: insert row · Ctrl+⌫: delete row · start a line with # for a heading</span>`;
   el.querySelectorAll(".tab[data-id]").forEach(t=>{
     const id=+t.dataset.id,nm=t.querySelector(".nm");
-    t.onclick=e=>{if(e.target.classList.contains("tx"))return;if(S.sheet!==id){S.sheet=id;pendingRow=null;focusPos=null;save();renderSheets();renderFlow()}};
+    t.onclick=e=>{if(e.target.classList.contains("tx"))return;if(S.sheet!==id){commitEdit();S.sheet=id;sel={row:0,col:S.current};save();renderSheets();renderFlow();$("flowwrap").scrollTop=0}};
     nm.ondblclick=()=>{nm.contentEditable="true";nm.focus();document.getSelection().selectAllChildren(nm)};
-    nm.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();nm.blur()}};
+    nm.onkeydown=e=>{e.stopPropagation();if(e.key==="Enter"){e.preventDefault();nm.blur()}};
     nm.onblur=()=>{if(nm.isContentEditable){nm.contentEditable="false";const s=S.sheets.find(x=>x.id===id);s.name=nm.textContent.trim()||s.name;save();renderSheets()}};
     const tx=t.querySelector(".tx");
     if(tx)tx.onclick=()=>askConfirm(`Delete the sheet "${S.sheets.find(x=>x.id===id).name}" and everything on it?`,()=>{
@@ -272,128 +290,188 @@ function renderSheets(){
   $("addSheet").onclick=addSheet;
 }
 function addSheet(){
-  const id=S.nextSheet++;S.sheets.push({id,name:"Sheet "+id});S.sheet=id;pendingRow=null;save();renderSheets();renderFlow();
+  commitEdit();
+  const id=S.nextSheet++;S.sheets.push({id,name:"Sheet "+id});S.sheet=id;sel={row:0,col:0};save();renderSheets();renderFlow();
   const nm=$("sheets").querySelector(`.tab[data-id="${id}"] .nm`);if(nm)nm.ondblclick();
 }
 
+function cellHTML(it){
+  if(!it)return "";
+  return (it.arg?`<span class="lab">${esc(it.arg)}</span>`:"")+(it.ai?`<i class="dot"></i>`:"")+esc(it.point);
+}
+function rowHTML(r,f,map){
+  let h=`<tr data-r="${r}"><th class="rn">${r+1}</th>`;
+  for(let c=0;c<f.cols.length;c++){
+    const it=map.get(r+":"+c);
+    h+=`<td class="${side(c)}${c===S.current?" cur":""}${it&&newIds.has(it.id)?" new":""}" data-r="${r}" data-c="${c}">${cellHTML(it)}</td>`;
+  }
+  return h+"</tr>";
+}
+function rowsToShow(){return Math.max(shown[S.sheet]||PAGE,Math.ceil((maxRow()+50)/PAGE)*PAGE)}
 function renderFlow(){
   const f=FORMATS[S.format],wrap=$("flowwrap");
-  const act=document.activeElement;
-  let keep=null;
-  if(act&&act.closest&&act.closest("#flowwrap")&&act.dataset.row){
-    let off=0;try{const sel=getSelection();if(sel.rangeCount){const r=sel.getRangeAt(0).cloneRange();r.selectNodeContents(act);r.setEnd(sel.focusNode,sel.focusOffset);off=r.toString().length}}catch(e){}
-    keep={row:+act.dataset.row,col:+act.dataset.col,kind:act.dataset.kind,off};
-  }
   const st=wrap.scrollTop,sl=wrap.scrollLeft;
-  const keys=rowKeys();
-  const last=keys.length?keys[keys.length-1]:0;
-  const all=[...keys,last+1];
-  let html=`<table class="grid"><thead><tr>${f.cols.map((c,i)=>`<th class="${side(i)} ${i===S.current?"cur":""}" data-col="${i}" title="Click to make this the current speech">${esc(c)}</th>`).join("")}</tr></thead><tbody>`;
-  for(const r of all){
-    html+="<tr>"+f.cols.map((_,ci)=>{
-      const it=cellAt(r,ci);
-      const cls=`${side(ci)} ${ci===S.current?"cur":""} ${it&&newIds.has(it.id)?"new":""} ${it&&it.ai?"ai":""}`;
-      const lab=it&&it.arg?`<div class="lab" contenteditable="true" spellcheck="false" data-row="${r}" data-col="${ci}" data-kind="lab">${esc(it.arg)}</div>`:"";
-      return `<td class="${cls}">${lab}<div class="c" contenteditable="true" data-row="${r}" data-col="${ci}" data-kind="c">${it?esc(it.point):""}</div></td>`;
-    }).join("")+"</tr>";
-  }
-  wrap.innerHTML=html+"</tbody></table>"+(S.items.length?"":`<div class="empty">Type straight into the grid, or load the AI model and press <b>Record</b> to have it flow for you.${S.format==="pf"?"<br>"+PF_NOTE:""}</div>`);
+  const n=rowsToShow();shown[S.sheet]=n;
+  const map=new Map();for(const it of sheetItems())map.set(it.row+":"+it.col,it);
+  let html=`<table class="grid"><colgroup><col class="rnc">${f.cols.map(()=>"<col>").join("")}</colgroup><thead><tr><th class="corner"></th>${f.cols.map((c,i)=>`<th class="${side(i)}${i===S.current?" cur":""}" data-col="${i}" title="Click to make this the current speech">${esc(c)}</th>`).join("")}</tr></thead><tbody>`;
+  const parts=[];for(let r=0;r<n;r++)parts.push(rowHTML(r,f,map));
+  html+=parts.join("")+"</tbody></table>";
+  wrap.innerHTML=html+`<div class="ed" id="ed" style="display:none"><textarea id="edTa" spellcheck="true" rows="1"></textarea></div>`;
   wrap.scrollTop=st;wrap.scrollLeft=sl;
   newIds.clear();
-  wrap.querySelectorAll("th").forEach(th=>th.onclick=()=>switchSpeech(+th.dataset.col));
-  const target=focusPos||keep;
-  if(target){focusCell(target.row,target.col,target.off,target.kind)}
-  focusPos=null;
+  wrap.querySelectorAll("thead th[data-col]").forEach(th=>th.onclick=()=>switchSpeech(+th.dataset.col));
+  wireEditor();
+  drawSel();
+  if(editing)openEditorUI(editing.row,editing.col,editing.text,true);
 }
-function cellEl(row,col,kind="c"){return $("flowwrap").querySelector(`[data-kind="${kind}"][data-row="${row}"][data-col="${col}"]`)}
-function focusCell(row,col,off,kind="c"){
-  let el=cellEl(row,col,kind)||cellEl(row,col);
-  if(!el)return;
-  el.focus();
-  try{
-    const len=el.textContent.length,pos=off==null||off==="end"?len:Math.min(off,len);
-    const sel=getSelection(),rg=document.createRange();
-    let node=el,o=pos;
-    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let tn,acc=0,found=false;
-    while((tn=walker.nextNode())){if(acc+tn.length>=pos){node=tn;o=pos-acc;found=true;break}acc+=tn.length}
-    if(!found){node=el;o=el.childNodes.length}
-    rg.setStart(node,o);rg.collapse(true);sel.removeAllRanges();sel.addRange(rg);
-  }catch(e){}
-  el.scrollIntoView({block:"nearest",inline:"nearest"});
+function loadMore(){
+  const f=FORMATS[S.format],tb=$("flowwrap").querySelector("tbody");if(!tb)return;
+  const from=shown[S.sheet]||PAGE,to=from+PAGE;
+  const map=new Map();for(const it of sheetItems())map.set(it.row+":"+it.col,it);
+  const parts=[];for(let r=from;r<to;r++)parts.push(rowHTML(r,f,map));
+  tb.insertAdjacentHTML("beforeend",parts.join(""));
+  shown[S.sheet]=to;
 }
-function caretInfo(el){
-  const sel=getSelection();if(!sel.rangeCount)return {atStart:true,atEnd:true,firstLine:true,lastLine:true};
-  const r=sel.getRangeAt(0);
-  const pre=r.cloneRange();pre.selectNodeContents(el);pre.setEnd(r.startContainer,r.startOffset);
-  const before=pre.toString(),len=el.textContent.length;
-  const caret=r.getBoundingClientRect(),box=el.getBoundingClientRect();
-  const lh=parseFloat(getComputedStyle(el).lineHeight)||18;
-  const hasRect=caret.height>0;
-  return {atStart:before.length===0&&r.collapsed,atEnd:before.length===len&&r.collapsed,
-    firstLine:!hasRect||caret.top-box.top<lh*0.8,lastLine:!hasRect||box.bottom-caret.bottom<lh*0.8};
+function tdAt(r,c){return $("flowwrap").querySelector(`td[data-r="${r}"][data-c="${c}"]`)}
+function drawSel(scroll){
+  const wrap=$("flowwrap");
+  wrap.querySelectorAll("td.sel").forEach(x=>x.classList.remove("sel"));
+  wrap.querySelectorAll("th.rn.on").forEach(x=>x.classList.remove("on"));
+  const td=tdAt(sel.row,sel.col);
+  if(td){td.classList.add("sel");td.parentElement.firstChild.classList.add("on");if(scroll)scrollIntoCell(td)}
 }
-function moveTo(row,col){
+function scrollIntoCell(td){
+  const wrap=$("flowwrap"),head=wrap.querySelector("thead").offsetHeight,rn=wrap.querySelector("th.rn").offsetWidth;
+  const t=td.offsetTop,b=t+td.offsetHeight,l=td.offsetLeft,rr=l+td.offsetWidth;
+  if(t-head<wrap.scrollTop)wrap.scrollTop=t-head;
+  else if(b>wrap.scrollTop+wrap.clientHeight)wrap.scrollTop=b-wrap.clientHeight;
+  if(l-rn<wrap.scrollLeft)wrap.scrollLeft=l-rn;
+  else if(rr>wrap.scrollLeft+wrap.clientWidth)wrap.scrollLeft=rr-wrap.clientWidth;
+}
+function select(r,c){
   const f=FORMATS[S.format];
-  col=Math.max(0,Math.min(f.cols.length-1,col));
-  focusPos={sheet:S.sheet,row,col};
-  if(cellEl(row,col)){focusCell(row,col,"end");focusPos=null}else renderFlow();
+  r=Math.max(0,r);c=Math.max(0,Math.min(f.cols.length-1,c));
+  while(r>=(shown[S.sheet]||PAGE))loadMore();
+  sel={row:r,col:c};drawSel(true);
+  if(document.activeElement!==$("flowwrap"))$("flowwrap").focus({preventScroll:true});
 }
-function rowAfter(row){const keys=rowKeys();return keys.find(k=>k>row)}
-function rowBefore(row){const keys=rowKeys();let p;for(const k of keys){if(k<row)p=k;else break}return p}
-function newRowBelow(row,col){
-  let nxt=rowAfter(row);
-  if(nxt!==undefined&&!cellAt(nxt,col)){moveTo(nxt,col);return}
-  if(nxt!==undefined&&nxt-row<1e-6){const idx=rowKeys().indexOf(row);renumber(S.sheet);row=rowKeys()[idx];nxt=rowAfter(row)}
-  const k=nxt===undefined?row+1:(row+nxt)/2;
-  pendingRow={sheet:S.sheet,row:k};moveTo(k,col);
+
+/* editing */
+function textFor(it){return it?(it.arg?"# "+it.arg+(it.point?"\n"+it.point:""):it.point):""}
+function wireEditor(){
+  const ta=$("edTa");
+  ta.addEventListener("input",()=>{if(editing)editing.text=ta.value;autosize()});
+  ta.addEventListener("keydown",e=>{
+    if(e.key==="Enter"&&!e.shiftKey&&!e.altKey){e.preventDefault();commitEdit();select(sel.row+1,sel.col);return}
+    if(e.key==="Tab"){e.preventDefault();commitEdit();select(sel.row,sel.col+(e.shiftKey?-1:1));return}
+    if(e.key==="Escape"){e.preventDefault();cancelEdit();return}
+    if(e.key==="ArrowUp"&&ta.selectionStart===0&&ta.selectionEnd===0){e.preventDefault();commitEdit();select(sel.row-1,sel.col);return}
+    if(e.key==="ArrowDown"&&ta.selectionStart===ta.value.length){e.preventDefault();commitEdit();select(sel.row+1,sel.col);return}
+    e.stopPropagation();
+  });
+  ta.addEventListener("blur",()=>{setTimeout(()=>{if(editing&&document.activeElement!==ta)commitEdit()},0)});
 }
-let saveT=null;function saveSoon(){clearTimeout(saveT);saveT=setTimeout(save,300)}
-function onCellInput(el){
-  const row=+el.dataset.row,col=+el.dataset.col,kind=el.dataset.kind;
-  let it=cellAt(row,col);
-  const text=el.innerText.replace(/\n$/,"");
-  if(kind==="lab"){if(it){it.arg=text.trim();saveSoon()}return}
-  if(!it){
-    if(!text.trim())return;
-    it={id:S.nextId++,sheet:S.sheet,row,col,arg:"",point:text,parent:leftParent(row,col)};
+function autosize(){const ta=$("edTa");if(!ta)return;ta.style.height="auto";ta.style.height=Math.max(ta.scrollHeight,$("ed").dataset.h|0)+"px"}
+function openEditorUI(r,c,text,keepCaret){
+  const td=tdAt(r,c);if(!td)return;
+  const ed=$("ed"),ta=$("edTa");
+  ed.style.display="block";ed.style.top=td.offsetTop+"px";ed.style.left=td.offsetLeft+"px";ed.style.width=td.offsetWidth+"px";
+  ed.dataset.h=td.offsetHeight;
+  ed.className="ed "+side(c);
+  ta.value=text;autosize();
+  ta.focus({preventScroll:true});
+  if(!keepCaret){const n=ta.value.length;ta.setSelectionRange(n,n)}
+}
+function startEdit(initial){
+  const it=cellAt(sel.row,sel.col);
+  const text=initial!==undefined?initial:textFor(it);
+  editing={row:sel.row,col:sel.col,text,sheet:S.sheet};
+  openEditorUI(sel.row,sel.col,text);
+}
+function parseCellText(t){
+  t=t.replace(/\s+$/,"");
+  let arg="",point=t;
+  const m=t.match(/^#+\s*([^\n]*)\n?([\s\S]*)$/);
+  if(m){arg=m[1].trim();point=m[2]}
+  return {arg,point:point.trim()};
+}
+function commitEdit(){
+  if(!editing)return;
+  const e=editing;editing=null;
+  const ed=$("ed");if(ed)ed.style.display="none";
+  if(e.sheet!==S.sheet)return;
+  const {arg,point}=parseCellText(e.text);
+  let it=cellAt(e.row,e.col);
+  if(!arg&&!point){
+    if(it){S.items.forEach(x=>{if(x.parent===it.id)x.parent=it.parent});S.items=S.items.filter(x=>x!==it)}
+  }else if(it){
+    if(it.point!==point||it.arg!==arg){it.point=point;it.arg=arg;it.ai=false}
+  }else{
+    it={id:S.nextId++,sheet:S.sheet,row:e.row,col:e.col,arg,point,parent:leftParent(e.row,e.col)};
     S.items.push(it);
-    if(pendingRow&&pendingRow.sheet===S.sheet&&pendingRow.row===row)pendingRow=null;
-  }else it.point=text;
-  saveSoon();
-}
-function onCellBlur(el){
-  const it=cellAt(+el.dataset.row,+el.dataset.col);
-  if(it&&!String(it.point).trim()&&!String(it.arg||"").trim()){
-    S.items.forEach(x=>{if(x.parent===it.id)x.parent=it.parent});
-    S.items=S.items.filter(x=>x!==it);save();
   }
+  save();
+  const td=tdAt(e.row,e.col);if(td)td.innerHTML=cellHTML(cellAt(e.row,e.col));
+  $("flowwrap").focus({preventScroll:true});
 }
-function onCellKey(e){
-  const el=e.target;if(!el.dataset||!el.dataset.row)return;
-  const row=+el.dataset.row,col=+el.dataset.col,c=caretInfo(el);
-  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onCellInput(el);onCellBlur(el);newRowBelow(row,col);return}
-  if(e.key==="Tab"){e.preventDefault();onCellInput(el);moveTo(row,col+(e.shiftKey?-1:1));return}
-  if(e.key==="Escape"){el.blur();return}
-  if(e.key==="ArrowDown"&&c.lastLine){const n=rowAfter(row);e.preventDefault();if(n!==undefined)moveTo(n,col);else{const last=rowKeys().slice(-1)[0]??0;moveTo(last+1,col)}return}
-  if(e.key==="ArrowUp"&&c.firstLine){const p=rowBefore(row);if(p!==undefined){e.preventDefault();moveTo(p,col)}return}
-  if(e.key==="ArrowRight"&&c.atEnd&&!e.shiftKey){e.preventDefault();moveTo(row,col+1);return}
-  if(e.key==="ArrowLeft"&&c.atStart&&!e.shiftKey){e.preventDefault();moveTo(row,col-1);return}
-  if(e.key==="Backspace"&&!el.textContent&&el.dataset.kind==="c"){
+function cancelEdit(){editing=null;const ed=$("ed");if(ed)ed.style.display="none";$("flowwrap").focus({preventScroll:true})}
+function clearCell(r,c){
+  const it=cellAt(r,c);if(!it)return;
+  S.items.forEach(x=>{if(x.parent===it.id)x.parent=it.parent});
+  S.items=S.items.filter(x=>x!==it);save();
+  const td=tdAt(r,c);if(td)td.innerHTML="";
+}
+
+function gridKey(e){
+  const k=e.key,mod=e.ctrlKey||e.metaKey;
+  if(mod&&k==="Enter"){e.preventDefault();insertRowAfter(sel.row);save();renderFlow();select(sel.row+1,sel.col);return}
+  if(mod&&k==="Backspace"){e.preventDefault();deleteRow(sel.row);save();renderFlow();drawSel(true);return}
+  if(mod&&(k==="c"||k==="C")){const it=cellAt(sel.row,sel.col);if(it){navigator.clipboard.writeText(textFor(it)).catch(()=>{});e.preventDefault()}return}
+  if(mod&&(k==="x"||k==="X")){const it=cellAt(sel.row,sel.col);if(it){navigator.clipboard.writeText(textFor(it)).catch(()=>{});clearCell(sel.row,sel.col);e.preventDefault()}return}
+  if(mod)return;
+  if(k==="ArrowUp"){e.preventDefault();select(sel.row-1,sel.col)}
+  else if(k==="ArrowDown"){e.preventDefault();select(sel.row+1,sel.col)}
+  else if(k==="ArrowLeft"){e.preventDefault();select(sel.row,sel.col-1)}
+  else if(k==="ArrowRight"){e.preventDefault();select(sel.row,sel.col+1)}
+  else if(k==="Tab"){e.preventDefault();select(sel.row,sel.col+(e.shiftKey?-1:1))}
+  else if(k==="Enter"||k==="F2"){e.preventDefault();if(e.shiftKey)select(sel.row-1,sel.col);else startEdit()}
+  else if(k==="Backspace"||k==="Delete"){e.preventDefault();clearCell(sel.row,sel.col)}
+  else if(k==="PageDown"){e.preventDefault();select(sel.row+20,sel.col)}
+  else if(k==="PageUp"){e.preventDefault();select(sel.row-20,sel.col)}
+  else if(k==="Home"){e.preventDefault();select(sel.row,0)}
+  else if(k==="End"){e.preventDefault();select(sel.row,FORMATS[S.format].cols.length-1)}
+  else if(k.length===1&&!e.altKey){e.preventDefault();startEdit(k)}
+}
+function setupGrid(){
+  const wrap=$("flowwrap");
+  wrap.tabIndex=0;
+  wrap.addEventListener("mousedown",e=>{
+    const td=e.target.closest("td[data-r]");
+    if(!td||e.target.closest("#ed"))return;
     e.preventDefault();
-    const it=cellAt(row,col);
-    if(it&&it.arg){it.arg="";save();focusPos={sheet:S.sheet,row,col};renderFlow();return}
-    if(it){S.items=S.items.filter(x=>x!==it);save()}
-    const p=rowBefore(row);
-    if(pendingRow&&pendingRow.row===row)pendingRow=null;
-    if(p!==undefined){focusPos={sheet:S.sheet,row:p,col};renderFlow()}else renderFlow();
-  }
+    if(editing)commitEdit();
+    select(+td.dataset.r,+td.dataset.c);
+  });
+  wrap.addEventListener("dblclick",e=>{const td=e.target.closest("td[data-r]");if(td){select(+td.dataset.r,+td.dataset.c);startEdit()}});
+  wrap.addEventListener("keydown",e=>{if(e.target===wrap)gridKey(e)});
+  wrap.addEventListener("scroll",()=>{if(wrap.scrollTop+wrap.clientHeight>wrap.scrollHeight-600)loadMore()});
+  wrap.addEventListener("paste",e=>{
+    if(e.target!==wrap)return;
+    const t=(e.clipboardData||window.clipboardData).getData("text");if(!t)return;
+    e.preventDefault();
+    const lines=t.replace(/\r/g,"").split("\n").filter((l,i,a)=>l.trim()||i<a.length-1);
+    lines.forEach((ln,i)=>{
+      ln.split("\t").forEach((cellText,j)=>{
+        const r=sel.row+i,c=sel.col+j;if(c>=FORMATS[S.format].cols.length)return;
+        editing={row:r,col:c,text:cellText,sheet:S.sheet};commitEdit();
+      });
+    });
+    renderFlow();
+  });
 }
-document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("#flowwrap"))onCellInput(e.target)});
-document.addEventListener("focusout",e=>{if(e.target.closest&&e.target.closest("#flowwrap")&&e.target.dataset.row){onCellBlur(e.target)}});
 document.addEventListener("keydown",e=>{
   if(e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[1-9]$/.test(e.key)){const i=+e.key-1;if(i<FORMATS[S.format].cols.length){e.preventDefault();switchSpeech(i)}return}
   if(e.ctrlKey&&e.shiftKey&&(e.key==="S"||e.key==="s")){e.preventDefault();addSheet();return}
-  if(e.target.closest&&e.target.closest("#flowwrap"))onCellKey(e);
 });
 let confirmYes=null;
 function askConfirm(text,yes){$("cText").textContent=text;confirmYes=yes;$("confirmModal").classList.add("show")}
@@ -639,7 +717,7 @@ $("fmt").onchange=e=>{
   if(S.items.length)toast("Format changed. Start a new round if the columns don't fit.");
   S.format=e.target.value;S.current=Math.min(S.current,FORMATS[S.format].cols.length-1);save();renderSpeeches();renderFlow();
 };
-$("clearBtn").onclick=()=>askConfirm("Start a new round? This clears every sheet and the transcript.",()=>{S.items=[];S.log=[];S.nextId=1;S.current=0;S.sheets=[{id:1,name:"Case"}];S.sheet=1;S.nextSheet=2;pendingRow=null;buffer="";pendingText="";save();renderSpeeches();renderSheets();renderFlow();renderTranscript()});
+$("clearBtn").onclick=()=>askConfirm("Start a new round? This clears every sheet and the transcript.",()=>{S.items=[];S.log=[];S.nextId=1;S.current=0;S.sheets=[{id:1,name:"Case"}];S.sheet=1;S.nextSheet=2;editing=null;sel={row:0,col:0};shown={};buffer="";pendingText="";save();renderSpeeches();renderSheets();renderFlow();renderTranscript()});
 $("cNo").onclick=()=>$("confirmModal").classList.remove("show");
 $("cYes").onclick=()=>{$("confirmModal").classList.remove("show");const f=confirmYes;confirmYes=null;if(f)f()};
 $("copyBtn").onclick=()=>{
@@ -654,7 +732,7 @@ $("copyBtn").onclick=()=>{
 };
 
 load();$("fmt").value=S.format;if(S.model)$("model").value=S.model;
-ensureSheets();renderSpeeches();renderSheets();renderFlow();renderTranscript();idleStatus();
+ensureSheets();setupGrid();sel={row:0,col:S.current};renderSpeeches();renderSheets();renderFlow();renderTranscript();idleStatus();
 
 (async()=>{
   try{

@@ -17,6 +17,16 @@ A free AI debate flow that listens through your mic and flows the round for you.
 
 You can also paste speech text into the side box and click **Flow this text**.
 
+## Flowing by hand
+The flow works like a spreadsheet, with or without the AI:
+- Click a cell (or move with the arrow keys) and start typing.
+- **Enter** saves and moves down. **Tab** moves right. **Esc** cancels.
+- **Shift+Enter** adds a new line inside a cell.
+- Start a cell with `#` to make it a heading (for example `# Contention 1`).
+- **Ctrl/Cmd+Enter** inserts a row and **Ctrl/Cmd+Backspace** deletes one. **Backspace** clears a cell.
+- **Ctrl+1–9** picks the current speech, and **Ctrl+Shift+S** adds a sheet (one per off-case, for example).
+- Scroll to the bottom to load 1,000 more rows.
+
 ## Formats
 Policy (CX), Lincoln-Douglas, Public Forum, Parliamentary.
 
