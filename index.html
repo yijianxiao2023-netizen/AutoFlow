@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoFlow — AI Debate Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--text:#e7e9ee;--muted:#8b93a3;
+  --aff:#4f8cff;--affbg:rgba(79,140,255,.10);--neg:#ff6b6b;--negbg:rgba(255,107,107,.10);
+  --accent:#7c5cff;--ok:#3ecf8e;--warn:#f5b84a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:14px}
+button,select,textarea{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+h1{font-size:16px;margin:0 8px 0 0;letter-spacing:.2px}
+h1 span{color:var(--accent)}
+.grp{display:flex;align-items:center;gap:6px}
+label.sm{color:var(--muted);font-size:12px}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#3a4150}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.rec{background:#e5484d;border-color:#e5484d;color:#fff;font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.spacer{flex:1}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.live{background:#e5484d;animation:pulse 1.2s infinite}
+.dot.busy{background:var(--warn);animation:pulse .8s infinite}
+.dot.ok{background:var(--ok)}
+@keyframes pulse{50%{opacity:.35}}
+.modelbar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line);background:#13161c;flex-wrap:wrap}
+.progress{flex:1;min-width:160px;height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;display:none}
+.progress>div{height:100%;width:0;background:var(--accent);transition:width .3s}
+.modelmsg{font-size:12px;color:var(--muted);max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.speeches{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--bg)}
+.sp{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
+.sp.aff{color:var(--aff)}.sp.neg{color:var(--neg)}
+.sp.active.aff{background:var(--aff);color:#fff;border-color:var(--aff)}
+.sp.active.neg{background:var(--neg);color:#fff;border-color:var(--neg)}
+main{display:grid;grid-template-columns:1fr 320px;height:calc(100% - 158px);min-height:0}
+@media (max-width:900px){main{grid-template-columns:1fr;height:auto}aside{border-left:none;border-top:1px solid var(--line)}}
+.flowwrap{overflow:auto;min-height:0}
+table{border-collapse:collapse;min-width:100%}
+th{position:sticky;top:0;z-index:2;background:var(--panel);padding:8px 10px;font-size:12px;letter-spacing:.5px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);min-width:200px;text-align:left}
+th.aff{color:var(--aff)}th.neg{color:var(--neg)}
+th.cur{box-shadow:inset 0 -3px 0 var(--accent)}
+td{vertical-align:top;border-right:1px solid var(--line);border-bottom:1px dashed var(--line);padding:6px;min-width:200px;max-width:280px}
+td.aff{background:var(--affbg)}td.neg{background:var(--negbg)}
+td.cur{outline:1px solid rgba(124,92,255,.35);outline-offset:-1px}
+.item{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 22px 6px 8px;margin-bottom:5px;line-height:1.35}
+.item.new{animation:flash 1.6s}
+@keyframes flash{0%{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,92,255,.35)}100%{}}
+.item .arg{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.item .pt{outline:none}
+.item .pt:focus,.item .arg:focus{background:var(--panel2);border-radius:4px}
+.item .x{position:absolute;top:3px;right:4px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px;opacity:0}
+.item:hover .x{opacity:1}
+.empty{color:var(--muted);text-align:center;padding:60px 20px;line-height:1.6}
+aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0;padding:12px 14px 6px}
+.transcript{flex:1;overflow:auto;padding:0 14px 10px;font-size:13px;line-height:1.5;min-height:120px}
+.transcript .done{color:var(--text)}
+.transcript .pending{color:var(--warn)}
+.transcript .partial{color:var(--muted);font-style:italic}
+.transcript .sep{display:block;color:var(--accent);font-size:11px;font-weight:700;margin:8px 0 2px}
+.manual{border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.manual textarea{width:100%;min-height:70px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}
+.row{display:flex;gap:6px;align-items:center}
+.note{font-size:11px;color:var(--muted);line-height:1.4}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:9px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10}
+.modal.show{display:flex}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:380px}
+.modal p{margin:0 0 14px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1>Auto<span>Flow</span></h1>
+  <div class="grp"><label class="sm" for="fmt">Format</label>
+    <select id="fmt">
+      <option value="policy">Policy (CX)</option>
+      <option value="ld">Lincoln-Douglas</option>
+      <option value="pf">Public Forum</option>
+      <option value="parli">Parliamentary</option>
+    </select>
+  </div>
+  <button class="btn rec" id="micBtn">● Record</button>
+  <button class="btn" id="flowNow" title="Send what's been heard so far to the AI right now">Flow now</button>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">Load the AI model to start</span></div>
+  <div class="spacer"></div>
+  <button class="btn" id="copyBtn">Copy flow</button>
+  <button class="btn" id="clearBtn">New round</button>
+</header>
+<div class="modelbar">
+  <label class="sm" for="model">AI model</label>
+  <select id="model">
+    <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen 2.5 3B: best notes (~2 GB)</option>
+    <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B (~2 GB)</option>
+    <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen 2.5 1.5B: faster (~1 GB)</option>
+    <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B: fastest (~0.9 GB)</option>
+  </select>
+  <button class="btn primary" id="loadBtn">Load model</button>
+  <div class="progress" id="prog"><div id="progBar"></div></div>
+  <span class="modelmsg" id="modelMsg">Runs on your computer and stays free. The first load downloads the model once.</span>
+</div>
+<div class="speeches" id="speeches"></div>
+<main>
+  <div class="flowwrap" id="flowwrap"></div>
+  <aside>
+    <h2>Live transcript</h2>
+    <div class="transcript" id="transcript"></div>
+    <div class="manual">
+      <textarea id="manualTxt" placeholder="Type or paste speech text here (works without a mic too)…"></textarea>
+      <div class="row">
+        <button class="btn primary" id="sendManual">Flow this text</button>
+        <span class="spacer"></span>
+      </div>
+      <div class="note">Pick the current speech above before it starts. Click any note to edit it, or hover over it and press × to delete it. Your flow is saved in this browser.</div>
+    </div>
+  </aside>
+</main>
+<div class="toast" id="toast"></div>
+<div class="modal" id="confirmModal"><div class="box"><p>Start a new round? This clears the current flow and transcript.</p><div class="row"><span class="spacer"></span><button class="btn" id="cNo">Cancel</button><button class="btn primary" id="cYes">Clear</button></div></div></div>
+
+<script type="module">
+import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.89";
+
+const FORMATS={
+  policy:{cols:["1AC","1NC","2AC","2NC","1NR","1AR","2NR","2AR"],sides:"ANANNANA"},
+  ld:{cols:["AC","NC","1AR","NR","2AR"],sides:"ANANA"},
+  pf:{cols:["1st Const","2nd Const","1st Rebuttal","2nd Rebuttal","1st Summary","2nd Summary","1st FF","2nd FF"],sides:"ANANANAN"},
+  parli:{cols:["PMC","LOC","MG","MO","LOR","PMR"],sides:"ANANNA"}
+};
+const FMT_NAMES={policy:"policy (CX) debate",ld:"Lincoln-Douglas debate",pf:"Public Forum debate",parli:"parliamentary debate"};
+const PF_NOTE="In this PF flow, columns alternate: blue = team speaking first, red = team speaking second.";
+const FLUSH_MS=15000;
+
+let S={format:"policy",current:0,items:[],nextId:1,log:[],model:null};
+let buffer="",pendingText="",partial="",inFlight=false,engine=null,loading=false,lastFlush=Date.now();
+
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem("autoflow",JSON.stringify(S))}catch(e){}}
+function load(){try{const v=JSON.parse(localStorage.getItem("autoflow")||"null");if(v&&v.items&&FORMATS[v.format])S=Object.assign(S,v);}catch(e){}}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),3000)}
+function setStatus(txt,kind){$("statusTxt").textContent=txt;$("dot").className="dot"+(kind?" "+kind:"")}
+function side(i){return FORMATS[S.format].sides[i]==="A"?"aff":"neg"}
+function idleStatus(){if(listening)setStatus("Listening…","live");else if(engine)setStatus("Ready","ok");else setStatus("Load the AI model to start","")}
+
+function rootOf(it){const byId=new Map(S.items.map(x=>[x.id,x]));let cur=it,g=0;while(cur.parent&&byId.has(cur.parent)&&g++<50)cur=byId.get(cur.parent);return cur.id}
+
+function renderSpeeches(){
+  const f=FORMATS[S.format];
+  $("speeches").innerHTML=f.cols.map((c,i)=>`<button class="sp ${side(i)} ${i===S.current?"active":""}" data-i="${i}">${esc(c)}</button>`).join("");
+  $("speeches").querySelectorAll(".sp").forEach(b=>b.onclick=()=>switchSpeech(+b.dataset.i));
+}
+function switchSpeech(i){
+  if(i===S.current)return;
+  if(buffer.trim())flush(true);
+  S.current=i;S.log.push({sep:FORMATS[S.format].cols[i]});save();renderSpeeches();renderFlow();renderTranscript();
+}
+
+let newIds=new Set();
+function renderFlow(){
+  const f=FORMATS[S.format];
+  const head=`<thead><tr>${f.cols.map((c,i)=>`<th class="${side(i)} ${i===S.current?"cur":""}">${esc(c)}</th>`).join("")}</tr></thead>`;
+  if(!S.items.length){
+    $("flowwrap").innerHTML=`<table>${head}</table><div class="empty">1. Click <b>Load model</b> above. The first time takes a few minutes.<br>2. Choose the speech that's about to start, then press <b>Record</b>.<br>Every 15 seconds or so, the AI turns what it heard into flow notes and lines each response up next to the argument it answers.${S.format==="pf"?"<br><br>"+PF_NOTE:""}</div>`;
+    return;
+  }
+  const roots=[],groups=new Map();
+  for(const it of S.items){const r=rootOf(it);if(!groups.has(r)){groups.set(r,[]);roots.push(r)}groups.get(r).push(it)}
+  let html=`<table>${head}<tbody>`;
+  for(const r of roots){
+    const g=groups.get(r);
+    html+="<tr>"+f.cols.map((_,ci)=>{
+      const cell=g.filter(x=>x.col===ci).sort((a,b)=>a.id-b.id);
+      return `<td class="${side(ci)} ${ci===S.current?"cur":""}">`+cell.map(it=>`<div class="item ${newIds.has(it.id)?"new":""}" data-id="${it.id}">${it.arg?`<div class="arg" contenteditable="true" spellcheck="false">${esc(it.arg)}</div>`:""}<div class="pt" contenteditable="true">${esc(it.point)}</div><button class="x" title="Delete">×</button></div>`).join("")+"</td>";
+    }).join("")+"</tr>";
+  }
+  $("flowwrap").innerHTML=html+"</tbody></table>";
+  newIds.clear();
+  $("flowwrap").querySelectorAll(".item").forEach(el=>{
+    const id=+el.dataset.id;
+    el.querySelector(".x").onclick=()=>{
+      const it=S.items.find(x=>x.id===id);
+      S.items.forEach(x=>{if(x.parent===id)x.parent=it?it.parent:null});
+      S.items=S.items.filter(x=>x.id!==id);save();renderFlow();
+    };
+    el.querySelectorAll("[contenteditable]").forEach(ed=>ed.addEventListener("blur",()=>{
+      const it=S.items.find(x=>x.id===id);if(!it)return;
+      if(ed.classList.contains("pt"))it.point=ed.textContent.trim();else it.arg=ed.textContent.trim();
+      save();
+    }));
+  });
+}
+
+function renderTranscript(){
+  const el=$("transcript");
+  let h=S.log.slice(-200).map(e=>e.sep?`<span class="sep">— ${esc(e.sep)} —</span>`:`<span class="done">${esc(e.t)} </span>`).join("");
+  if(pendingText)h+=`<span class="pending">${esc(pendingText)} </span>`;
+  if(buffer)h+=`<span class="pending">${esc(buffer)} </span>`;
+  if(partial)h+=`<span class="partial">${esc(partial)}</span>`;
+  el.innerHTML=h||`<span class="partial">Text that has been heard shows up here. Yellow text is still waiting to be flowed.</span>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+/* ---------- AI (WebLLM, runs locally) ---------- */
+$("model").value=S.model||$("model").value;
+async function loadModel(){
+  if(loading)return;
+  if(!navigator.gpu){toast("This browser doesn't support WebGPU. Use a recent version of Chrome or Edge.");$("modelMsg").textContent="WebGPU isn't available. Open this site in a recent version of Chrome.";return}
+  loading=true;$("loadBtn").disabled=true;$("model").disabled=true;$("prog").style.display="block";
+  const id=$("model").value;S.model=id;save();
+  setStatus("Loading AI model…","busy");
+  try{
+    if(engine){await engine.unload();engine=null}
+    engine=await webllm.CreateMLCEngine(id,{initProgressCallback:p=>{
+      $("progBar").style.width=Math.round((p.progress||0)*100)+"%";
+      $("modelMsg").textContent=p.text||"";
+    }});
+    $("modelMsg").textContent="Model loaded and running on your computer.";
+    $("loadBtn").textContent="Reload";
+    idleStatus();
+    if(buffer.trim())flush(true);
+  }catch(e){
+    console.error(e);engine=null;
+    $("modelMsg").textContent="Couldn't load: "+(e&&e.message?e.message:e);
+    setStatus("Model failed to load","");
+    toast("The model failed to load. Try a smaller model or close other tabs.");
+  }finally{loading=false;$("loadBtn").disabled=false;$("model").disabled=false;setTimeout(()=>{$("prog").style.display="none"},800)}
+}
+$("loadBtn").onclick=loadModel;
+$("model").onchange=()=>{if(engine)$("modelMsg").textContent="Press Reload to switch to this model."};
+
+function buildMessages(chunk){
+  const f=FORMATS[S.format],cur=f.cols[S.current];
+  const existing=S.items.slice(-40).map(it=>`#${it.id} [${f.cols[it.col]}] ${it.arg?it.arg+": ":""}${it.point}`).join("\n")||"(empty)";
+  const sys=`You are an expert ${FMT_NAMES[S.format]} judge who flows rounds. You turn live speech transcripts into short flow notes and reply with JSON only.`;
+  const user=`Speeches in order: ${f.cols.join(", ")}. Current speech: ${cur}.
+${S.format==="pf"?PF_NOTE+"\n":""}
+EXISTING FLOW:
+${existing}
+
+NEW TRANSCRIPT FROM ${cur} (speech-to-text, may have errors):
+"""${chunk}"""
+
+Make one item per argument, card, or answer in the new transcript.
+- "note": flow shorthand, max 14 words. Examples: "DA – econ decline → nuke war", "N/U – bill already dead", "Perm do both", "Extend Adv 1 – dropped". Keep author names and years.
+- "responds_to": the # number of the existing item it answers or extends, or null if it is a new contention, advantage, off-case (T, DA, CP, K) or framework.
+- "label": short section label like "Adv 1 – Econ", "Politics DA", "Cap K", or "" if it is just an answer.
+- Skip filler, roadmaps, time signals. Don't repeat items already in the flow.
+
+Reply with JSON only, in this exact shape:
+{"items":[{"label":"","note":"","responds_to":null}]}`;
+  return [{role:"system",content:sys},{role:"user",content:user}];
+}
+
+function parseJSON(txt){
+  try{return JSON.parse(txt)}catch(e){}
+  const m=txt&&txt.match(/\{[\s\S]*\}/);
+  if(m){try{return JSON.parse(m[0])}catch(e){}}
+  return {items:[]};
+}
+
+async function flush(force){
+  const chunk=buffer.trim();
+  if(!chunk||!engine)return;
+  if(inFlight){if(force)setTimeout(()=>flush(true),1500);return}
+  if(!force&&chunk.split(/\s+/).length<8)return;
+  buffer="";pendingText=chunk;inFlight=true;lastFlush=Date.now();
+  const col=S.current;
+  setStatus("AI is flowing…","busy");renderTranscript();
+  try{
+    const r=await engine.chat.completions.create({messages:buildMessages(chunk),temperature:0.2,max_tokens:700,response_format:{type:"json_object"}});
+    const out=parseJSON(r.choices?.[0]?.message?.content||"");
+    const list=Array.isArray(out)?out:(out.items||[]);
+    const ids=new Set(S.items.map(x=>x.id));
+    for(const it0 of list){
+      if(!it0||!it0.note)continue;
+      let p=it0.responds_to;if(typeof p==="string")p=parseInt(p.replace(/\D/g,""),10);
+      const parent=ids.has(p)?p:null;
+      const it={id:S.nextId++,col,arg:String(it0.label||"").slice(0,60),point:String(it0.note).slice(0,220),parent};
+      S.items.push(it);ids.add(it.id);newIds.add(it.id);
+    }
+    S.log.push({t:chunk});pendingText="";save();renderFlow();
+  }catch(e){
+    console.error(e);buffer=(chunk+" "+buffer).trim();pendingText="";
+    toast("AI error. It will retry with the next chunk.");
+  }finally{inFlight=false;idleStatus();renderTranscript()}
+}
+setInterval(()=>{if(buffer.trim()&&Date.now()-lastFlush>FLUSH_MS)flush(false)},2000);
+
+/* ---------- Mic (browser speech recognition) ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false,wantListen=false;
+if(!SR){$("micBtn").disabled=true;$("micBtn").title="Speech recognition needs Chrome. You can still type or paste text."}
+else{
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang="en-US";
+  rec.onresult=e=>{
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript.trim();
+      if(e.results[i].isFinal){if(t)buffer+=(buffer?" ":"")+t}else interim+=t+" ";
+    }
+    partial=interim.trim();renderTranscript();
+  };
+  rec.onerror=e=>{
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){wantListen=false;toast("Mic access was blocked. Allow it in the address bar.")}
+  };
+  rec.onstart=()=>{listening=true;$("micBtn").textContent="■ Stop";idleStatus()};
+  rec.onend=()=>{
+    if(wantListen){try{rec.start()}catch(e){}return}
+    listening=false;partial="";$("micBtn").textContent="● Record";idleStatus();renderTranscript();
+    setTimeout(()=>flush(true),400);
+  };
+}
+$("micBtn").onclick=()=>{
+  if(!rec)return;
+  if(wantListen){wantListen=false;rec.stop();return}
+  if(!engine)toast("Recording now. Notes will appear once the model is loaded.");
+  wantListen=true;try{rec.start()}catch(e){}
+};
+
+/* ---------- Other controls ---------- */
+$("flowNow").onclick=()=>{if(!engine){toast("Load the model first");return}if(!buffer.trim()){toast("No new text to flow yet");return}flush(true)};
+$("sendManual").onclick=()=>{
+  const t=$("manualTxt").value.trim();if(!t)return;
+  buffer+=(buffer?" ":"")+t;$("manualTxt").value="";renderTranscript();
+  if(!engine){toast("Load the model to flow this text");return}
+  flush(true);
+};
+$("fmt").onchange=e=>{
+  if(S.items.length)toast("Format changed. Start a new round if the columns don't fit.");
+  S.format=e.target.value;S.current=Math.min(S.current,FORMATS[S.format].cols.length-1);save();renderSpeeches();renderFlow();
+};
+$("clearBtn").onclick=()=>$("confirmModal").classList.add("show");
+$("cNo").onclick=()=>$("confirmModal").classList.remove("show");
+$("cYes").onclick=()=>{S.items=[];S.log=[];S.nextId=1;S.current=0;buffer="";pendingText="";$("confirmModal").classList.remove("show");save();renderSpeeches();renderFlow();renderTranscript()};
+$("copyBtn").onclick=()=>{
+  const f=FORMATS[S.format];
+  const text=f.cols.map((c,ci)=>{const its=S.items.filter(x=>x.col===ci);if(!its.length)return"";return `== ${c} ==\n`+its.map(it=>`${it.arg?"["+it.arg+"] ":""}${it.point}${it.parent?"  (→ #"+it.parent+")":""}  #${it.id}`).join("\n")}).filter(Boolean).join("\n\n");
+  navigator.clipboard.writeText(text||"(empty flow)").then(()=>toast("Flow copied as text")).catch(()=>toast("Couldn't copy"));
+};
+
+load();$("fmt").value=S.format;if(S.model)$("model").value=S.model;
+renderSpeeches();renderFlow();renderTranscript();idleStatus();
+
+(async()=>{
+  try{
+    if(navigator.gpu&&S.model&&await webllm.hasModelInCache(S.model)){$("modelMsg").textContent="Model already downloaded. Loading…";loadModel()}
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
