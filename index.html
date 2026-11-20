@@ -82,7 +82,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 </head>
 <body>
 <header>
-  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v7</small></h1>
+  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v7.1</small></h1>
   <div class="grp"><label class="sm" for="fmt">Format</label>
     <select id="fmt">
       <option value="policy">Policy (CX)</option>
@@ -148,7 +148,7 @@ const FORMATS={
 };
 const FMT_NAMES={policy:"policy (CX) debate",ld:"Lincoln-Douglas debate",pf:"Public Forum debate",parli:"parliamentary debate"};
 const PF_NOTE="In this PF flow, columns alternate: blue = team speaking first, red = team speaking second.";
-const FLUSH_MS=15000;
+const FLUSH_MS=10000;
 
 let S={format:"policy",current:0,items:[],nextId:1,log:[],model:null};
 let buffer="",pendingText="",partial="",inFlight=false,engine=null,loading=false,lastFlush=Date.now();
@@ -180,7 +180,7 @@ function renderFlow(){
   const f=FORMATS[S.format];
   const head=`<thead><tr>${f.cols.map((c,i)=>`<th class="${side(i)} ${i===S.current?"cur":""}">${esc(c)}</th>`).join("")}</tr></thead>`;
   if(!S.items.length){
-    $("flowwrap").innerHTML=`<table>${head}</table><div class="empty">1. Click <b>Load model</b> above. The first time takes a few minutes.<br>2. Choose the speech that's about to start, then press <b>Record</b>.<br>Every 15 seconds or so, the AI turns what it heard into flow notes and lines each response up next to the argument it answers.${S.format==="pf"?"<br><br>"+PF_NOTE:""}</div>`;
+    $("flowwrap").innerHTML=`<table>${head}</table><div class="empty">1. Click <b>Load model</b> above. The first time takes a few minutes.<br>2. Choose the speech that's about to start, then press <b>Record</b>.<br>Every 10 seconds or so, the AI turns what it heard into flow notes and lines each response up next to the argument it answers.${S.format==="pf"?"<br><br>"+PF_NOTE:""}</div>`;
     return;
   }
   const roots=[],groups=new Map();
@@ -296,8 +296,14 @@ ${existing}
 NEW TRANSCRIPT FROM ${cur} (speech-to-text, may have errors):
 """${chunk}"""
 
-Make one item per argument, card, or answer in the new transcript.
-- "note": flow shorthand, max 14 words, using abbreviations and arrows (→). Keep author names and years.
+Flow in detail, like a varsity debater. Make a SEPARATE item for EACH of these:
+- the contention, advantage, value, criterion or plan text itself
+- each subpoint or tagline (the claim said before a card)
+- each card: its author and year plus what the evidence says
+- each warrant (the reason why) and each impact (why it matters)
+- each answer to an opponent's argument
+A full contention usually needs 4 to 10 items. Do NOT merge several points into one item.
+- "note": flow shorthand, max 20 words, using abbreviations and arrows (→). Put the author name and year at the start of card notes, like "Rivera 24: teens can't sleep before 11 → <7 hrs".
 - "responds_to": the # number of the existing item it answers or extends, or null if it is a new contention, advantage, off-case (T, DA, CP, K) or framework.
 - "label": short section name the speaker used (like "Contention 1", "Value", "Framework", "Advantage 2"), or "" if it is just an answer.
 - Skip filler, roadmaps, time signals. Don't repeat items already in the flow.
@@ -335,7 +341,7 @@ async function flush(force){
   if(inFlight){if(force)setTimeout(()=>flush(true),1500);return}
   const words=chunk.split(/\s+/);
   if(!force&&words.length<8)return;
-  const MAXW=350;
+  const MAXW=160;
   const now=words.slice(0,MAXW).join(" "),rest=words.slice(MAXW).join(" ");
   buffer=rest;pendingText=now;inFlight=true;lastFlush=Date.now();
   const col=S.current;
@@ -397,7 +403,7 @@ function showRaw(raw,n){
   $("rawSum").textContent="Last AI reply ("+n+" note"+(n===1?"":"s")+" found)";
 }
 async function askAI(messages){
-  const r=await engine.chat.completions.create({messages,temperature:0.1,max_tokens:600});
+  const r=await engine.chat.completions.create({messages,temperature:0.1,max_tokens:900});
   return r.choices?.[0]?.message?.content||"";
 }
 setInterval(()=>{if(buffer.trim()&&Date.now()-lastFlush>FLUSH_MS)flush(false)},2000);
