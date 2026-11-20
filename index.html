@@ -317,13 +317,15 @@ async function flush(force){
   const chunk=buffer.trim();
   if(!chunk||!engine)return;
   if(inFlight){if(force)setTimeout(()=>flush(true),1500);return}
-  if(!force&&chunk.split(/\s+/).length<8)return;
-  buffer="";pendingText=chunk;inFlight=true;lastFlush=Date.now();
+  const words=chunk.split(/\s+/);
+  if(!force&&words.length<8)return;
+  const MAXW=350;
+  const now=words.slice(0,MAXW).join(" "),rest=words.slice(MAXW).join(" ");
+  buffer=rest;pendingText=now;inFlight=true;lastFlush=Date.now();
   const col=S.current;
   setStatus("AI is flowing…","busy");renderTranscript();
   try{
-    const r=await engine.chat.completions.create({messages:buildMessages(chunk),temperature:0.2,max_tokens:700,response_format:{type:"json_object"}});
-    const out=parseJSON(r.choices?.[0]?.message?.content||"");
+    const out=parseJSON(await askAI(buildMessages(now)));
     const list=Array.isArray(out)?out:(out.items||[]);
     const ids=new Set(S.items.map(x=>x.id));
     for(const it0 of list){
@@ -333,11 +335,30 @@ async function flush(force){
       const it={id:S.nextId++,col,arg:String(it0.label||"").slice(0,60),point:String(it0.note).slice(0,220),parent};
       S.items.push(it);ids.add(it.id);newIds.add(it.id);
     }
-    S.log.push({t:chunk});pendingText="";save();renderFlow();
+    S.log.push({t:now});pendingText="";save();renderFlow();aiFails=0;
+    if(buffer.trim())setTimeout(()=>flush(true),300);
   }catch(e){
-    console.error(e);buffer=(chunk+" "+buffer).trim();pendingText="";
-    toast("AI error. It will retry with the next chunk.");
+    console.error(e);buffer=(now+" "+buffer).trim();pendingText="";aiFails++;
+    const m=String(e&&e.message||e);
+    showError("AI error: "+m);
+    toast(aiFails>=3?"The AI keeps failing. Click 'Copy error' next to the model and send it to Claude.":"AI error. It will retry with the next chunk.");
   }finally{inFlight=false;idleStatus();renderTranscript()}
+}
+let jsonMode=true,aiFails=0;
+async function askAI(messages){
+  const base={messages,temperature:0.2,max_tokens:600};
+  if(jsonMode){
+    try{
+      const r=await engine.chat.completions.create({...base,response_format:{type:"json_object"}});
+      return r.choices?.[0]?.message?.content||"";
+    }catch(e){
+      console.warn("JSON mode failed, switching to plain mode:",e);
+      jsonMode=false;
+      try{await engine.resetChat()}catch(_){}
+    }
+  }
+  const r=await engine.chat.completions.create(base);
+  return r.choices?.[0]?.message?.content||"";
 }
 setInterval(()=>{if(buffer.trim()&&Date.now()-lastFlush>FLUSH_MS)flush(false)},2000);
 
