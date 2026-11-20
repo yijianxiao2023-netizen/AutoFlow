@@ -82,7 +82,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 </head>
 <body>
 <header>
-  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v6</small></h1>
+  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v7</small></h1>
   <div class="grp"><label class="sm" for="fmt">Format</label>
     <select id="fmt">
       <option value="policy">Policy (CX)</option>
@@ -297,13 +297,15 @@ NEW TRANSCRIPT FROM ${cur} (speech-to-text, may have errors):
 """${chunk}"""
 
 Make one item per argument, card, or answer in the new transcript.
-- "note": flow shorthand, max 14 words. Examples: "DA – econ decline → nuke war", "N/U – bill already dead", "Perm do both", "Extend Adv 1 – dropped". Keep author names and years.
+- "note": flow shorthand, max 14 words, using abbreviations and arrows (→). Keep author names and years.
 - "responds_to": the # number of the existing item it answers or extends, or null if it is a new contention, advantage, off-case (T, DA, CP, K) or framework.
-- "label": short section label like "Adv 1 – Econ", "Politics DA", "Cap K", or "" if it is just an answer.
+- "label": short section name the speaker used (like "Contention 1", "Value", "Framework", "Advantage 2"), or "" if it is just an answer.
 - Skip filler, roadmaps, time signals. Don't repeat items already in the flow.
 
-Reply with JSON only. Example of the format (your notes must come from the NEW TRANSCRIPT, not this example):
-{"items":[{"label":"Politics DA","note":"Uniq – bill passes now, PC high","responds_to":null},{"label":"","note":"Link – plan costs PC, Senate backlash","responds_to":null},{"label":"","note":"N/U – bill already dead (Politico 26)","responds_to":3}]}`;
+IMPORTANT: Only write what the speaker actually said in the NEW TRANSCRIPT. Never invent arguments, evidence, or topics. Use the speaker's own key words.
+
+Reply with JSON only, in this format (replace the <...> parts):
+{"items":[{"label":"<section name or empty>","note":"<short note using the speaker's words>","responds_to":<# number or null>}]}`;
   return [{role:"system",content:sys},{role:"user",content:user}];
 }
 
@@ -342,8 +344,9 @@ async function flush(force){
     const raw=await askAI(buildMessages(now));
     console.log("[AutoFlow] AI reply:",raw);
     let list=parseJSON(raw).items.map(normItem).filter(Boolean);
-    const EX=["Uniq – bill passes now, PC high","Link – plan costs PC, Senate backlash","N/U – bill already dead (Politico 26)"];
-    list=list.filter(x=>!EX.includes(String(x.note).trim()));
+    const before=list.length;
+    list=list.filter(x=>!/^\s*</.test(x.note)&&grounded(x.note+" "+(x.label||""),now));
+    if(before>list.length)console.log("[AutoFlow] dropped",before-list.length,"made-up note(s)");
     if(!list.length)list=parseLines(raw);
     showRaw(raw,list.length);
     const ids=new Set(S.items.map(x=>x.id));
@@ -363,6 +366,15 @@ async function flush(force){
   }finally{inFlight=false;idleStatus();renderTranscript()}
 }
 let aiFails=0;
+const STOP=new Set("that this with from they their there have will would could should about which when what because into than then them also just your were been being does very more most some such only over other these those while where after before here said says like make makes made need needs dont doesnt cant isnt arent extend extends drop dropped answer answers response respond responds argument arguments contention value criterion framework claim warrant impact impacts evidence card cards point points speaker side team says opponent opponents aff neg affirmative negative".split(" "));
+function stem(w){return w.slice(0,5)}
+function grounded(note,source){
+  const src=new Set((source.toLowerCase().match(/[a-z]{3,}/g)||[]).map(stem));
+  const words=(note.toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w));
+  if(words.length<2)return true;
+  const hit=words.filter(w=>src.has(stem(w))).length;
+  return hit/words.length>=0.4;
+}
 function normItem(o){
   if(!o)return null;
   if(typeof o==="string")return {label:"",note:o,responds_to:null};
@@ -385,7 +397,7 @@ function showRaw(raw,n){
   $("rawSum").textContent="Last AI reply ("+n+" note"+(n===1?"":"s")+" found)";
 }
 async function askAI(messages){
-  const r=await engine.chat.completions.create({messages,temperature:0.2,max_tokens:600});
+  const r=await engine.chat.completions.create({messages,temperature:0.1,max_tokens:600});
   return r.choices?.[0]?.message?.content||"";
 }
 setInterval(()=>{if(buffer.trim()&&Date.now()-lastFlush>FLUSH_MS)flush(false)},2000);
