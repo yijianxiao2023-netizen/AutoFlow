@@ -36,7 +36,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .modelbar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line);background:#13161c;flex-wrap:wrap}
 .progress{flex:1;min-width:160px;height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;display:none}
 .progress>div{height:100%;width:0;background:var(--accent);transition:width .3s}
-.modelmsg{font-size:12px;color:var(--muted);max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modelmsg{font-size:12px;color:var(--muted);max-width:680px;line-height:1.4}
 .speeches{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--bg)}
 .sp{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
 .sp.aff{color:var(--aff)}.sp.neg{color:var(--neg)}
@@ -130,7 +130,14 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 <div class="modal" id="confirmModal"><div class="box"><p>Start a new round? This clears the current flow and transcript.</p><div class="row"><span class="spacer"></span><button class="btn" id="cNo">Cancel</button><button class="btn primary" id="cYes">Clear</button></div></div></div>
 
 <script type="module">
-import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.89";
+const WEBLLM_URLS=["https://esm.run/@mlc-ai/web-llm@0.2.89","https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.89/+esm","https://unpkg.com/@mlc-ai/web-llm@0.2.89/lib/index.js"];
+let webllm=null;
+async function getWebLLM(){
+  if(webllm)return webllm;
+  let last;
+  for(const u of WEBLLM_URLS){try{webllm=await import(u);return webllm}catch(e){last=e}}
+  throw new Error("Couldn't download the AI library ("+(last&&last.message||last)+"). Check your internet connection or ad blocker.");
+}
 
 const FORMATS={
   policy:{cols:["1AC","1NC","2AC","2NC","1NR","1AR","2NR","2AR"],sides:"ANANNANA"},
@@ -214,27 +221,60 @@ function renderTranscript(){
 
 /* ---------- AI (WebLLM, runs locally) ---------- */
 $("model").value=S.model||$("model").value;
+let gpuInfo=null;
+async function checkGPU(){
+  if(gpuInfo)return gpuInfo;
+  if(!navigator.gpu)return gpuInfo={ok:false,why:"WebGPU isn't available in this browser. Use a recent version of Chrome, and check that chrome://settings/system → 'Use graphics acceleration' is on."};
+  let a=null;
+  try{a=await navigator.gpu.requestAdapter({powerPreference:"high-performance"})}catch(e){}
+  if(!a)return gpuInfo={ok:false,why:"Chrome couldn't access your graphics chip. Turn on chrome://settings/system → 'Use graphics acceleration when available', then restart Chrome."};
+  let desc="";try{const i=a.info||(a.requestAdapterInfo?await a.requestAdapterInfo():null);if(i)desc=[i.vendor,i.architecture,i.description].filter(Boolean).join(" ")}catch(e){}
+  return gpuInfo={ok:true,f16:a.features.has("shader-f16"),maxBuf:a.limits.maxStorageBufferBindingSize,desc};
+}
+function compatId(id,g){return g.f16?id:id.replace("q4f16_1","q4f32_1")}
+let lastError="";
+function showError(msg){
+  lastError=msg;
+  $("modelMsg").innerHTML=`<span style="color:#ff8a8a">${esc(msg)}</span> <button class="btn" id="copyErr" style="padding:2px 8px;font-size:11px">Copy error</button>`;
+  $("modelMsg").title=msg;
+  $("copyErr").onclick=()=>navigator.clipboard.writeText(lastError+"\n\nGPU: "+JSON.stringify(gpuInfo)+"\nBrowser: "+navigator.userAgent).then(()=>toast("Error copied. Paste it to Claude.")).catch(()=>{});
+}
 async function loadModel(){
   if(loading)return;
-  if(!navigator.gpu){toast("This browser doesn't support WebGPU. Use a recent version of Chrome or Edge.");$("modelMsg").textContent="WebGPU isn't available. Open this site in a recent version of Chrome.";return}
+  const g=await checkGPU();
+  if(!g.ok){showError(g.why);setStatus("Can't run the AI here","");return}
   loading=true;$("loadBtn").disabled=true;$("model").disabled=true;$("prog").style.display="block";
-  const id=$("model").value;S.model=id;save();
+  const chosen=$("model").value;S.model=chosen;save();
+  const id=compatId(chosen,g);
   setStatus("Loading AI model…","busy");
+  const progress=p=>{$("progBar").style.width=Math.round((p.progress||0)*100)+"%";$("modelMsg").textContent=p.text||""};
   try{
-    if(engine){await engine.unload();engine=null}
-    engine=await webllm.CreateMLCEngine(id,{initProgressCallback:p=>{
-      $("progBar").style.width=Math.round((p.progress||0)*100)+"%";
-      $("modelMsg").textContent=p.text||"";
-    }});
-    $("modelMsg").textContent="Model loaded and running on your computer.";
+    const wl=await getWebLLM();
+    if(engine){try{await engine.unload()}catch(e){}engine=null}
+    const backends=["cache","indexeddb"];
+    let err=null;
+    for(const cacheBackend of backends){
+      try{
+        engine=await wl.CreateMLCEngine(id,{initProgressCallback:progress,appConfig:{...wl.prebuiltAppConfig,cacheBackend}});
+        err=null;break;
+      }catch(e){err=e;console.error("load failed with",cacheBackend,e);engine=null;
+        const m=String(e&&e.message||e);
+        if(/memory|device.*lost|OutOfMemory|maxStorageBuffer|limit/i.test(m))break;
+      }
+    }
+    if(err)throw err;
+    $("modelMsg").textContent="Model loaded"+(id!==chosen?" (compatible version for your graphics chip)":"")+" and running on your computer.";
     $("loadBtn").textContent="Reload";
     idleStatus();
     if(buffer.trim())flush(true);
   }catch(e){
-    console.error(e);engine=null;
-    $("modelMsg").textContent="Couldn't load: "+(e&&e.message?e.message:e);
+    engine=null;
+    let m=String(e&&e.message||e);
+    if(/memory|device.*lost|OutOfMemory/i.test(m))m+=". Try a smaller model (1.5B or 1B) and close other tabs.";
+    else if(/network|fetch|Cache\.add|Failed to fetch/i.test(m))m+=". The model download failed. Check your connection, then press Load again (it continues where it left off).";
+    else if(/quota|storage/i.test(m))m+=". Your browser ran out of storage space for the model. Free up disk space or try a smaller model.";
+    showError("Couldn't load: "+m);
     setStatus("Model failed to load","");
-    toast("The model failed to load. Try a smaller model or close other tabs.");
   }finally{loading=false;$("loadBtn").disabled=false;$("model").disabled=false;setTimeout(()=>{$("prog").style.display="none"},800)}
 }
 $("loadBtn").onclick=loadModel;
@@ -355,7 +395,9 @@ renderSpeeches();renderFlow();renderTranscript();idleStatus();
 
 (async()=>{
   try{
-    if(navigator.gpu&&S.model&&await webllm.hasModelInCache(S.model)){$("modelMsg").textContent="Model already downloaded. Loading…";loadModel()}
+    const g=await checkGPU();
+    if(!g.ok){showError(g.why);return}
+    if(S.model){const wl=await getWebLLM();if(await wl.hasModelInCache(compatId(S.model,g))){$("modelMsg").textContent="Model already downloaded. Loading…";loadModel()}}
   }catch(e){}
 })();
 </script>
