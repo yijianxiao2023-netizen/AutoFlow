@@ -226,8 +226,11 @@ async function checkGPU(){
   if(gpuInfo)return gpuInfo;
   if(!navigator.gpu)return gpuInfo={ok:false,why:"WebGPU isn't available in this browser. Use a recent version of Chrome, and check that chrome://settings/system → 'Use graphics acceleration' is on."};
   let a=null;
-  try{a=await navigator.gpu.requestAdapter({powerPreference:"high-performance"})}catch(e){}
-  if(!a)return gpuInfo={ok:false,why:"Chrome couldn't access your graphics chip. Turn on chrome://settings/system → 'Use graphics acceleration when available', then restart Chrome."};
+  for(const opts of [{powerPreference:"high-performance"},{},{powerPreference:"low-power"}]){
+    try{a=await navigator.gpu.requestAdapter(opts)}catch(e){}
+    if(a)break;
+  }
+  if(!a)return gpuInfo={ok:false,why:"Your browser has WebGPU but won't let this site use your graphics chip (it's probably blocked for your chip). In Chrome, open chrome://flags/#enable-unsafe-webgpu, set it to Enabled and relaunch. Or try Safari on macOS 26."};
   let desc="";try{const i=a.info||(a.requestAdapterInfo?await a.requestAdapterInfo():null);if(i)desc=[i.vendor,i.architecture,i.description].filter(Boolean).join(" ")}catch(e){}
   return gpuInfo={ok:true,f16:a.features.has("shader-f16"),maxBuf:a.limits.maxStorageBufferBindingSize,desc};
 }
