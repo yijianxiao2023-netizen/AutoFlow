@@ -82,7 +82,7 @@ aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(-
 </head>
 <body>
 <header>
-  <h1>Auto<span>Flow</span></h1>
+  <h1>Auto<span>Flow</span> <small style="font-size:10px;color:var(--muted);font-weight:500">v5</small></h1>
   <div class="grp"><label class="sm" for="fmt">Format</label>
     <select id="fmt">
       <option value="policy">Policy (CX)</option>
@@ -307,10 +307,17 @@ Reply with JSON only, in this exact shape:
 }
 
 function parseJSON(txt){
+  txt=String(txt||"").replace(/```(?:json)?/gi,"").trim();
   try{return JSON.parse(txt)}catch(e){}
-  const m=txt&&txt.match(/\{[\s\S]*\}/);
-  if(m){try{return JSON.parse(m[0])}catch(e){}}
-  return {items:[]};
+  const m=txt.match(/\{[\s\S]*\}/);
+  if(m){
+    try{return JSON.parse(m[0])}catch(e){}
+    try{return JSON.parse(m[0].replace(/,\s*([\]}])/g,"$1"))}catch(e){}
+  }
+  const a=txt.match(/\[[\s\S]*\]/);
+  if(a){try{return {items:JSON.parse(a[0])}}catch(e){}}
+  const objs=[...txt.matchAll(/\{[^{}]*"note"[^{}]*\}/g)].map(x=>{try{return JSON.parse(x[0])}catch(e){return null}}).filter(Boolean);
+  return {items:objs};
 }
 
 async function flush(force){
@@ -344,20 +351,9 @@ async function flush(force){
     toast(aiFails>=3?"The AI keeps failing. Click 'Copy error' next to the model and send it to Claude.":"AI error. It will retry with the next chunk.");
   }finally{inFlight=false;idleStatus();renderTranscript()}
 }
-let jsonMode=true,aiFails=0;
+let aiFails=0;
 async function askAI(messages){
-  const base={messages,temperature:0.2,max_tokens:600};
-  if(jsonMode){
-    try{
-      const r=await engine.chat.completions.create({...base,response_format:{type:"json_object"}});
-      return r.choices?.[0]?.message?.content||"";
-    }catch(e){
-      console.warn("JSON mode failed, switching to plain mode:",e);
-      jsonMode=false;
-      try{await engine.resetChat()}catch(_){}
-    }
-  }
-  const r=await engine.chat.completions.create(base);
+  const r=await engine.chat.completions.create({messages,temperature:0.2,max_tokens:600});
   return r.choices?.[0]?.message?.content||"";
 }
 setInterval(()=>{if(buffer.trim()&&Date.now()-lastFlush>FLUSH_MS)flush(false)},2000);
